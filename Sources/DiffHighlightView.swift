@@ -17,6 +17,7 @@ struct DiffHighlightView: View {
                             
                             Text(createAttributedString(for: originalText, isOriginal: true))
                                 .textSelection(.enabled)
+                                .lineSpacing(2) // Better reading experience
                                 .padding(12)
                                 .background(Color(NSColor.controlBackgroundColor))
                                 .cornerRadius(6)
@@ -33,6 +34,7 @@ struct DiffHighlightView: View {
                             
                             Text(createAttributedString(for: correctedText, isOriginal: false))
                                 .textSelection(.enabled)
+                                .lineSpacing(2) // Better reading experience
                                 .padding(12)
                                 .background(Color.green.opacity(0.05))
                                 .cornerRadius(6)
@@ -46,6 +48,7 @@ struct DiffHighlightView: View {
                     // 如果没有原文，只显示校对结果
                     Text(correctedText)
                         .textSelection(.enabled)
+                        .lineSpacing(2) // Better reading experience
                         .padding(12)
                         .frame(maxWidth: .infinity, alignment: .leading)
                 }

@@ -14,6 +14,7 @@ final class AppState: ObservableObject {
     @Published var originalText: String = ""
     @AppStorage("ollamaURL") var ollamaURL: String = "http://127.0.0.1:11434"
     @AppStorage("keyboardShortcut") var keyboardShortcut: String = "command+/"
+    @AppStorage("showDiffByDefault") var showDiffByDefault: Bool = true
     
     private var ollamaService = OllamaService()
     private var cancellables = Set<AnyCancellable>()
@@ -29,7 +30,7 @@ final class AppState: ObservableObject {
     
     init() {
         setupKeyboardShortcut()
-        checkConnection()
+        preloadOllamaConnection()
     }
     
     deinit {
@@ -72,6 +73,18 @@ final class AppState: ObservableObject {
         }
     }
     
+    private func preloadOllamaConnection() {
+        // Immediately check connection on startup
+        checkConnection()
+        
+        // Preload the service if we have a valid URL
+        Task {
+            await ollamaService.updateBaseURL(ollamaURL)
+            // Additional warmup - make a lightweight call to ensure service is ready
+            _ = try? await ollamaService.listModels()
+        }
+    }
+    
     func updateOllamaURL(_ url: String) {
         ollamaURL = url
         Task {
@@ -96,22 +109,41 @@ final class AppState: ObservableObject {
         self.isProcessing = true
         self.showProofreadingDialog(nil)
         
+        performProofreadingWithRetry(text: selectedText)
+    }
+    
+    private func performProofreadingWithRetry(text: String, retryCount: Int = 0) {
+        let maxRetries = 3
+        
         Task {
             do {
                 let corrected = try await ollamaService.generate(
                     model: currentModel,
-                    prompt: currentPrompt + "\n\n" + selectedText
+                    prompt: currentPrompt + "\n\n" + text
                 )
                 
                 await MainActor.run {
                     self.correctedText = corrected
                     self.isProcessing = false
+                    // Update connection status on success
+                    if self.connectionStatus == .error {
+                        self.connectionStatus = .connected
+                    }
                 }
             } catch {
-                await MainActor.run {
-                    self.isProcessing = false
-                    self.correctedText = "Error: \(error.localizedDescription)"
-                    self.connectionStatus = .error
+                if retryCount < maxRetries {
+                    // Wait briefly before retry
+                    try? await Task.sleep(nanoseconds: 1_000_000_000) // 1 second
+                    performProofreadingWithRetry(text: text, retryCount: retryCount + 1)
+                } else {
+                    await MainActor.run {
+                        self.isProcessing = false
+                        let errorMessage = retryCount > 0 ? 
+                            "Failed after \(retryCount + 1) attempts: \(error.localizedDescription)" :
+                            "Error: \(error.localizedDescription)"
+                        self.correctedText = errorMessage
+                        self.connectionStatus = .error
+                    }
                 }
             }
         }

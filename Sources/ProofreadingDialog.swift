@@ -3,8 +3,15 @@ import SwiftUI
 struct ProofreadingDialog: View {
     @EnvironmentObject private var appState: AppState
     @Environment(\.dismiss) private var dismiss
-    @State private var showDiff = true
     @State private var monitor: Any?
+    
+    // Use computed property to bind to AppState's persistent setting
+    private var showDiff: Binding<Bool> {
+        Binding(
+            get: { appState.showDiffByDefault },
+            set: { appState.showDiffByDefault = $0 }
+        )
+    }
     
     var body: some View {
         VStack(spacing: 8) {
@@ -14,14 +21,14 @@ struct ProofreadingDialog: View {
             } else {
                 // Toggle for display mode
                 HStack {
-                    Toggle("Show Differences", isOn: $showDiff)
+                    Toggle("Show Differences", isOn: showDiff)
                         .toggleStyle(SwitchToggleStyle())
                     Spacer()
                 }
                 .padding(.horizontal, 16)
                 .padding(.top, 12)
                 
-                if showDiff && !appState.originalText.isEmpty {
+                if showDiff.wrappedValue && !appState.originalText.isEmpty {
                     // Show diff highlighting
                     DiffHighlightView(
                         originalText: appState.originalText,
@@ -48,7 +55,7 @@ struct ProofreadingDialog: View {
                     }
                     .buttonStyle(.bordered)
                     
-                    if showDiff && !appState.originalText.isEmpty {
+                    if showDiff.wrappedValue && !appState.originalText.isEmpty {
                         Button("Copy Original") {
                             copyToClipboard(appState.originalText)
                         }

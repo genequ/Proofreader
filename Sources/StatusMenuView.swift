@@ -42,6 +42,8 @@ struct StatusMenuView: View {
         VStack(alignment: .leading, spacing: 8) {
             Button(action: { appState.showSettings(nil) }) {
                 Label("Settings", systemImage: "gear")
+                    .symbolVariant(.none)
+                    .symbolRenderingMode(.monochrome)
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .foregroundColor(.primary)
             }
@@ -49,6 +51,8 @@ struct StatusMenuView: View {
             
             Button(action: { appState.showPromptEditor(nil) }) {
                 Label("Change Prompt", systemImage: "text.quote")
+                    .symbolVariant(.none)
+                    .symbolRenderingMode(.monochrome)
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .foregroundColor(.primary)
             }
@@ -56,6 +60,8 @@ struct StatusMenuView: View {
             
             Button(action: { appState.showAbout(nil) }) {
                 Label("About Proofreader", systemImage: "info.circle")
+                    .symbolVariant(.none)
+                    .symbolRenderingMode(.monochrome)
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .foregroundColor(.primary)
             }
@@ -66,6 +72,8 @@ struct StatusMenuView: View {
     private var quitButton: some View {
         Button(action: { NSApplication.shared.terminate(nil) }) {
             Label("Quit", systemImage: "power")
+                .symbolVariant(.none)
+                .symbolRenderingMode(.monochrome)
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .foregroundColor(.primary)
         }
@@ -82,9 +90,9 @@ struct StatusMenuView: View {
     
     private var statusColor: Color {
         switch appState.connectionStatus {
-        case .connected: return .green
-        case .disconnected: return .orange
-        case .error: return .red
+        case .connected: return Color(.systemGreen)
+        case .disconnected: return Color(.systemOrange) 
+        case .error: return Color(.systemRed)
         }
     }
 }
