@@ -1,0 +1,64 @@
+# Swift
+.build/
+DerivedData/
+*.xcodeproj/
+*.xcworkspace/
+
+# App bundle
+Proofreader.app/
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Icon files
+Icon?
+
+# Thumbnails
+._*
+
+# Files that might appear in the root of a volume
+.DocumentRevisions-V100
+.fseventsd
+.Spotlight-V100
+.TemporaryItems
+.Trashes
+.VolumeIcon.icns
+.com.apple.timemachine.donotpresent
+
+# Logs
+logs/
+*.log
+
+# Runtime data
+pids/
+*.pid
+*.seed
+
+# Dependency directories
+node_modules/
+
+# Swift Package Manager
+Packages/
+.swiftpm/
+
+# Xcode
+*.mode1v3
+*.mode2v3
+*.moved-aside
+*.pbxuser
+*.perspectivev3
+
+# Backup files
+*.backup
+*.old
+
+# Temporary files
+*.swp
+*.swo
+*~
+
+# Build artifacts
+*.o
+*.a
