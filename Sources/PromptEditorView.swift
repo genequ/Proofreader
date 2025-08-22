@@ -26,6 +26,11 @@ struct PromptEditorView: View {
                     )
                     .frame(height: 180)
                     .focused($isEditorFocused)
+                
+                Text("Note: System rules for consistent AI behavior are automatically added.")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+                    .padding(.top, 4)
             }
             
             HStack(spacing: 12) {
@@ -80,6 +85,6 @@ struct PromptEditorView: View {
     }
     
     private var defaultPrompt: String {
-        "Proofread the following text to correct typos and grammar errors while strictly preserving the original meaning, formatting, and style. Maintain the input format exactly (e.g., Markdown remains Markdown, plain text remains plain text). Do not add explanations, notes, or extra output—only return the corrected text."
+        "You are a text proofreader. Your task is to correct typos and grammar errors in the provided text while strictly preserving the original meaning, formatting, and style."
     }
 }

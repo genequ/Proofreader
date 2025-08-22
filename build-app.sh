@@ -4,7 +4,7 @@
 set -e
 
 # Get version information
-VERSION="1.0.1"
+VERSION="1.1.0"
 BUILD_NUMBER=$(date +"%Y%m%d%H%M")
 GIT_HASH=$(git rev-parse --short HEAD 2>/dev/null || echo "unknown")
 BUILD_DATE=$(date -u +"%Y-%m-%d %H:%M:%S UTC")
