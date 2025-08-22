@@ -24,14 +24,14 @@ A sleek menu bar utility that uses Ollama's AI models to proofread and correct t
 ## Installation
 
 ### Option 1: Download Pre-built App
-1. Download the latest `Proofreader.app` from [Releases](https://github.com/geneq/Proofreader/releases)
+1. Download the latest `Proofreader.app` from [Releases](https://github.com/genequ/Proofreader/releases)
 2. Drag to your Applications folder
 3. Launch the app (right-click → Open if Gatekeeper blocks it)
 
 ### Option 2: Build from Source
 ```bash
 # Clone the repository
-git clone https://github.com/geneq/Proofreader.git
+git clone https://github.com/genequ/Proofreader.git
 cd Proofreader
 
 # Build the application
@@ -80,7 +80,7 @@ Proofread the following text to correct typos and grammar errors while strictly 
 ### Build Steps
 ```bash
 # Clone and build
-git clone https://github.com/geneq/Proofreader.git
+git clone https://github.com/genequ/Proofreader.git
 cd Proofreader
 
 # Install dependencies (Alamofire)
@@ -177,8 +177,8 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 If you encounter any issues or have questions:
 
 1. Check the [Troubleshooting](#troubleshooting) section
-2. Search [existing issues](https://github.com/geneq/Proofreader/issues)
-3. Create a [new issue](https://github.com/geneq/Proofreader/issues/new) with details
+2. Search [existing issues](https://github.com/genequ/Proofreader/issues)
+3. Create a [new issue](https://github.com/genequ/Proofreader/issues/new) with details
 
 ---
 
