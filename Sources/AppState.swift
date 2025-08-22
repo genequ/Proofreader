@@ -11,6 +11,7 @@ final class AppState: ObservableObject {
     @Published var isProcessing: Bool = false
     @Published var showProofreadingDialog: Bool = false
     @Published var correctedText: String = ""
+    @Published var originalText: String = ""
     @AppStorage("ollamaURL") var ollamaURL: String = "http://127.0.0.1:11434"
     @AppStorage("keyboardShortcut") var keyboardShortcut: String = "command+/"
     
@@ -86,6 +87,9 @@ final class AppState: ObservableObject {
     
     func handleProofreadingShortcut() {
         guard let selectedText = getSelectedText() else { return }
+        
+        // Store original text for comparison
+        self.originalText = selectedText
         
         // Show dialog immediately with loading state
         self.correctedText = ""
@@ -236,9 +240,9 @@ final class AppState: ObservableObject {
     @objc func showProofreadingDialog(_ sender: Any?) {
         WindowManager.shared.showWindow(
             id: "proofreading-dialog",
-            title: "",
+            title: "Proofreading Results",
             content: { ProofreadingDialog().environmentObject(self) },
-            size: NSSize(width: 700, height: 350)
+            size: NSSize(width: 800, height: 500)
         )
     }
     
@@ -248,6 +252,15 @@ final class AppState: ObservableObject {
             title: "Settings",
             content: { SettingsView().environmentObject(self) },
             size: NSSize(width: 400, height: 250)
+        )
+    }
+    
+    @objc func showAbout(_ sender: Any?) {
+        WindowManager.shared.showWindow(
+            id: "about",
+            title: "About Proofreader",
+            content: { AboutView().environmentObject(self) },
+            size: NSSize(width: 320, height: 300)
         )
     }
 }

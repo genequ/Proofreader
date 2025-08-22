@@ -4,13 +4,15 @@ struct SettingsView: View {
     @EnvironmentObject private var appState: AppState
     @Environment(\.dismiss) private var dismiss
     @FocusState private var isURLFieldFocused: Bool
+    @State private var monitor: Any?
     
     var body: some View {
-        VStack(spacing: 20) {
-            VStack(spacing: 20) {
+        VStack(spacing: 16) {
+            VStack(spacing: 16) {
                 HStack(alignment: .firstTextBaseline) {
                     Text("URL:")
-                        .font(.body)
+                        .font(.subheadline)
+                        .foregroundColor(.secondary)
                         .frame(width: 60, alignment: .trailing)
                     TextField("Ollama URL", text: $appState.ollamaURL)
                         .textFieldStyle(RoundedBorderTextFieldStyle())
@@ -19,7 +21,8 @@ struct SettingsView: View {
                 
                 HStack(alignment: .firstTextBaseline) {
                     Text("Model:")
-                        .font(.body)
+                        .font(.subheadline)
+                        .foregroundColor(.secondary)
                         .frame(width: 60, alignment: .trailing)
                     Picker("", selection: $appState.currentModel) {
                         ForEach(appState.availableModels, id: \.self) { model in
@@ -32,7 +35,8 @@ struct SettingsView: View {
                 
                 HStack(alignment: .firstTextBaseline) {
                     Text("Shortcut:")
-                        .font(.body)
+                        .font(.subheadline)
+                        .foregroundColor(.secondary)
                         .frame(width: 60, alignment: .trailing)
                     TextField("command+/", text: $appState.keyboardShortcut)
                         .textFieldStyle(RoundedBorderTextFieldStyle())
@@ -48,7 +52,7 @@ struct SettingsView: View {
                 .controlSize(.regular)
             }
             
-            HStack {
+            HStack(spacing: 12) {
                 Spacer()
                 
                 Button("Cancel") {
@@ -66,11 +70,32 @@ struct SettingsView: View {
             }
             .padding(.top, 8)
         }
-        .padding(28)
-        .frame(width: 420, height: 280)
+        .padding(20)
+        .frame(width: 400, height: 280)
         .onAppear {
             appState.checkConnection()
             isURLFieldFocused = true
+            setupKeyMonitor()
+        }
+        .onDisappear {
+            removeKeyMonitor()
+        }
+    }
+    
+    private func setupKeyMonitor() {
+        monitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { event in
+            if event.keyCode == 53 { // ESC key
+                dismiss()
+                return nil // Consume the event
+            }
+            return event
+        }
+    }
+    
+    private func removeKeyMonitor() {
+        if let monitor = monitor {
+            NSEvent.removeMonitor(monitor)
+            self.monitor = nil
         }
     }
 }

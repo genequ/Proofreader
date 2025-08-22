@@ -53,6 +53,13 @@ struct StatusMenuView: View {
                     .foregroundColor(.primary)
             }
             .buttonStyle(.plain)
+            
+            Button(action: { appState.showAbout(nil) }) {
+                Label("About Proofreader", systemImage: "info.circle")
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .foregroundColor(.primary)
+            }
+            .buttonStyle(.plain)
         }
     }
     

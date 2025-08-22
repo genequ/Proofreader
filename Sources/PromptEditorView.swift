@@ -5,13 +5,10 @@ struct PromptEditorView: View {
     @Environment(\.dismiss) private var dismiss
     @State private var editedPrompt: String = ""
     @FocusState private var isEditorFocused: Bool
+    @State private var monitor: Any?
     
     var body: some View {
-        VStack(spacing: 20) {
-            Text("Edit Prompt")
-                .font(.title3)
-                .fontWeight(.semibold)
-                .foregroundColor(.primary)
+        VStack(spacing: 16) {
             
             VStack(alignment: .leading, spacing: 6) {
                 Text("Proofreading Instructions:")
@@ -31,7 +28,7 @@ struct PromptEditorView: View {
                     .focused($isEditorFocused)
             }
             
-            HStack {
+            HStack(spacing: 12) {
                 Button("Reset to Default") {
                     editedPrompt = defaultPrompt
                 }
@@ -53,11 +50,32 @@ struct PromptEditorView: View {
             }
             .padding(.top, 8)
         }
-        .padding(24)
+        .padding(20)
         .frame(width: 460, height: 320)
         .onAppear {
             editedPrompt = appState.currentPrompt
             isEditorFocused = true
+            setupKeyMonitor()
+        }
+        .onDisappear {
+            removeKeyMonitor()
+        }
+    }
+    
+    private func setupKeyMonitor() {
+        monitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { event in
+            if event.keyCode == 53 { // ESC key
+                dismiss()
+                return nil // Consume the event
+            }
+            return event
+        }
+    }
+    
+    private func removeKeyMonitor() {
+        if let monitor = monitor {
+            NSEvent.removeMonitor(monitor)
+            self.monitor = nil
         }
     }
     
