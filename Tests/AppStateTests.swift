@@ -71,4 +71,24 @@ final class AppStateTests: XCTestCase {
         let defaultText = "Proofread the following text to correct typos and grammar errors"
         XCTAssertTrue(appState.currentPrompt.contains(defaultText))
     }
+    
+    func testKeyboardShortcutUpdates() {
+        // Test updating keyboard shortcut
+        let originalShortcut = appState.keyboardShortcut
+        let newShortcut = "command+."
+        
+        appState.updateKeyboardShortcut(newShortcut)
+        XCTAssertEqual(appState.keyboardShortcut, newShortcut)
+        
+        // Test with different shortcuts
+        appState.updateKeyboardShortcut("control+shift+p")
+        XCTAssertEqual(appState.keyboardShortcut, "control+shift+p")
+        
+        appState.updateKeyboardShortcut("option+space")
+        XCTAssertEqual(appState.keyboardShortcut, "option+space")
+        
+        // Restore original
+        appState.updateKeyboardShortcut(originalShortcut)
+        XCTAssertEqual(appState.keyboardShortcut, originalShortcut)
+    }
 }
