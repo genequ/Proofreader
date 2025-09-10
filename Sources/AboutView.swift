@@ -55,7 +55,7 @@ struct AboutView: View {
             // Buttons
             HStack(spacing: 12) {
                 Button("GitHub") {
-                    if let url = URL(string: "https://github.com/geneq/Proofreader") {
+                    if let url = URL(string: "https://github.com/genequ/Proofreader") {
                         NSWorkspace.shared.open(url)
                     }
                 }

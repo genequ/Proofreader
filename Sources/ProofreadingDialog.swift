@@ -55,13 +55,6 @@ struct ProofreadingDialog: View {
                     }
                     .buttonStyle(.bordered)
                     
-                    if showDiff.wrappedValue && !appState.originalText.isEmpty {
-                        Button("Copy Original") {
-                            copyToClipboard(appState.originalText)
-                        }
-                        .buttonStyle(.bordered)
-                    }
-                    
                     Spacer()
                     
                     Button("Done") {
