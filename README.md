@@ -8,7 +8,7 @@ A sleek menu bar utility that uses Ollama's AI models to proofread and correct t
 
 ## Features
 
-- ✨ **Global Keyboard Shortcut** - Proofread selected text anywhere (default: `⌘+/`)
+- ✨ **Global Keyboard Shortcut** - Proofread selected text anywhere (default: `⌘+.`)
 - 🚀 **Ollama Integration** - Works with any Ollama model (Gemma, Llama, Mistral, etc.)
 - 🎯 **Menu Bar Utility** - Lightweight, always accessible from your menu bar
 - ⚡ **Real-time Processing** - Instant proofreading with visual feedback
@@ -18,44 +18,23 @@ A sleek menu bar utility that uses Ollama's AI models to proofread and correct t
 ## Requirements
 
 - macOS 12.0 or later
-- [Ollama](https://ollama.ai) installed and running
-- At least one Ollama model pulled (e.g., `ollama pull gemma:4b`)
+- [Ollama]('brew install ollama') installed and running
+- At least one Ollama model pulled (e.g., `ollama pull gemma3:1b`)
 
-## Installation
-
-### Option 1: Download Pre-built App
-1. Download the latest `Proofreader.app` from [Releases](https://github.com/genequ/Proofreader/releases)
-2. Drag to your Applications folder
-3. Launch the app (right-click → Open if Gatekeeper blocks it)
-
-### Option 2: Build from Source
-```bash
-# Clone the repository
-git clone https://github.com/genequ/Proofreader.git
-cd Proofreader
-
-# Build the application
-./build-app.sh
-
-# The app will be created as Proofreader.app
-open Proofreader.app
-```
 
 ## Usage
 
 1. **Select text** anywhere on your Mac
-2. **Press `⌘+/`** (or your custom shortcut)
+2. **Press `⌘+.`** (or your custom shortcut)
 3. **Wait for processing** - the menu bar icon shows progress
 4. **Review results** - corrected text appears in a dialog
-5. **Copy to clipboard** or close the dialog
+5. **Copy and close** - clicking "Copy Corrected" automatically copies to clipboard and closes the dialog
 
-### Menu Bar Actions
-- Click the menu bar icon to access:
-  - **Proofread Selection** - Manual trigger
-  - **Change Prompt** - Customize the proofreading instructions
-  - **Select Model** - Switch between Ollama models
-  - **Settings** - Configure Ollama URL and keyboard shortcut
-  - **Quit** - Exit the application
+### Dialog Actions
+- **Copy Corrected**: Copies the proofread text to clipboard and closes the dialog
+- **Show Differences**: Toggle to view side-by-side comparison of original vs corrected text
+- **Done**: Close the dialog without copying
+
 
 ## Configuration
 
@@ -67,7 +46,7 @@ open Proofreader.app
 
 ### Default Prompt
 ```
-Proofread the following text to correct typos and grammar errors while strictly preserving the original meaning, formatting, and style. Maintain the input format exactly (e.g., Markdown remains Markdown, plain text remains plain text). Do not add explanations, notes, or extra output—only return the corrected text.
+You are a text proofreader. Your task is to correct typos and grammar errors in the provided text while strictly preserving the original meaning, formatting, and style.
 ```
 
 ## Building from Source
@@ -114,7 +93,7 @@ Proofreader/
 
 **"No models available"**
 - Ensure Ollama is running: `ollama serve`
-- Pull at least one model: `ollama pull gemma:2b`
+- Pull at least one model: `ollama pull gemma3:1b`
 
 **Connection errors**
 - Check Ollama URL in Settings (default: `http://127.0.0.1:11434`)
@@ -146,7 +125,7 @@ Grant these in: `System Settings → Privacy & Security → Accessibility`
 
 ### Custom Keyboard Shortcuts
 Supported formats:
-- `command+/` (default)
+- `command+.` (default)
 - `control+shift+p`
 - `option+space`
 - `f1` through `f12`

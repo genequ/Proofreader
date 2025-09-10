@@ -52,6 +52,7 @@ struct ProofreadingDialog: View {
                 HStack(spacing: 12) {
                     Button("Copy Corrected") {
                         copyToClipboard(appState.correctedText)
+                        dismiss()
                     }
                     .buttonStyle(.bordered)
                     

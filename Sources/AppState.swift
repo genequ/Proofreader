@@ -13,7 +13,7 @@ final class AppState: ObservableObject {
     @Published var correctedText: String = ""
     @Published var originalText: String = ""
     @AppStorage("ollamaURL") var ollamaURL: String = "http://127.0.0.1:11434"
-    @AppStorage("keyboardShortcut") var keyboardShortcut: String = "command+/"
+    @AppStorage("keyboardShortcut") var keyboardShortcut: String = "command+."
     @AppStorage("showDiffByDefault") var showDiffByDefault: Bool = true
     
     private var ollamaService = OllamaService()
