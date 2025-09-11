@@ -18,7 +18,7 @@ A sleek menu bar utility that uses Ollama's AI models to proofread and correct t
 ## Requirements
 
 - macOS 12.0 or later
-- [Ollama]('brew install ollama') installed and running
+- [Ollama](`brew install ollama`) installed and running
 - At least one Ollama model pulled (e.g., `ollama pull gemma3:1b`)
 
 
