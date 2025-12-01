@@ -15,58 +15,60 @@ struct ProofreadingDialog: View {
     
     var body: some View {
         VStack(spacing: 8) {
-            if appState.isProcessing {
-                LoadingView()
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-            } else {
-                // Toggle for display mode
-                HStack {
-                    Toggle("Show Differences", isOn: showDiff)
-                        .toggleStyle(SwitchToggleStyle())
-                    Spacer()
-                }
-                .padding(.horizontal, 16)
-                .padding(.top, 12)
+            // Toggle for display mode
+            HStack {
+                Toggle("Show Differences", isOn: showDiff)
+                    .toggleStyle(SwitchToggleStyle())
+                Spacer()
                 
-                if showDiff.wrappedValue && !appState.originalText.isEmpty {
-                    // Show diff highlighting
-                    DiffHighlightView(
-                        originalText: appState.originalText,
-                        correctedText: appState.correctedText
-                    )
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-                } else {
-                    // Plain text editor view
-                    TextEditor(text: .constant(appState.correctedText))
-                        .font(.system(.body, design: .default))
-                        .background(Color(NSColor.textBackgroundColor))
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 6)
-                                .stroke(Color(NSColor.separatorColor), lineWidth: 0.5)
-                        )
-                        .cornerRadius(6)
-                        .padding(.horizontal, 16)
-                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                if appState.isProcessing {
+                    ProgressView()
+                        .scaleEffect(0.8)
+                        .padding(.trailing, 8)
                 }
-                
-                HStack(spacing: 12) {
-                    Button("Copy Corrected") {
-                        copyToClipboard(appState.correctedText)
-                        dismiss()
-                    }
-                    .buttonStyle(.bordered)
-                    
-                    Spacer()
-                    
-                    Button("Done") {
-                        dismiss()
-                    }
-                    .buttonStyle(.borderedProminent)
-                    .keyboardShortcut(.return)
-                }
-                .padding(.bottom, 16)
-                .padding(.horizontal, 16)
             }
+            .padding(.horizontal, 16)
+            .padding(.top, 12)
+            
+            if showDiff.wrappedValue && !appState.originalText.isEmpty && !appState.isProcessing {
+                // Show diff highlighting only when done processing
+                DiffHighlightView(
+                    originalText: appState.originalText,
+                    correctedText: appState.correctedText
+                )
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+            } else {
+                // Plain text editor view - visible during streaming
+                TextEditor(text: .constant(appState.correctedText))
+                    .font(.system(.body, design: .default))
+                    .background(Color(NSColor.textBackgroundColor))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 6)
+                            .stroke(Color(NSColor.separatorColor), lineWidth: 0.5)
+                    )
+                    .cornerRadius(6)
+                    .padding(.horizontal, 16)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+            }
+            
+            HStack(spacing: 12) {
+                Button("Copy Corrected") {
+                    copyToClipboard(appState.correctedText)
+                    dismiss()
+                }
+                .buttonStyle(.bordered)
+                .disabled(appState.isProcessing)
+                
+                Spacer()
+                
+                Button("Done") {
+                    dismiss()
+                }
+                .buttonStyle(.borderedProminent)
+                .keyboardShortcut(.return)
+            }
+            .padding(.bottom, 16)
+            .padding(.horizontal, 16)
         }
         .frame(width: 800, height: 500)
         .onAppear {

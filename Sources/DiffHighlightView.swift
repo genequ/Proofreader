@@ -8,7 +8,7 @@ struct DiffHighlightView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 16) {
                 if !originalText.isEmpty && !correctedText.isEmpty {
-                    // 显示差异比较
+                    // Show diff comparison
                     VStack(alignment: .leading, spacing: 12) {
                         VStack(alignment: .leading, spacing: 8) {
                             Text("Original:")
@@ -45,7 +45,7 @@ struct DiffHighlightView: View {
                         }
                     }
                 } else {
-                    // 如果没有原文，只显示校对结果
+                    // If no original text, only show corrected results
                     Text(correctedText)
                         .textSelection(.enabled)
                         .lineSpacing(2) // Better reading experience
@@ -60,7 +60,7 @@ struct DiffHighlightView: View {
     private func createAttributedString(for text: String, isOriginal: Bool) -> AttributedString {
         var attributedString = AttributedString(text)
         
-        // 如果有原文和校对文本，进行差异比较
+        // If both original and corrected text exist, perform diff comparison
         if !originalText.isEmpty && !correctedText.isEmpty {
             let differences = findDifferences(original: originalText, corrected: correctedText)
             
@@ -100,7 +100,7 @@ struct DiffHighlightView: View {
     }
     
     private func findDifferences(original: String, corrected: String) -> [TextDifference] {
-        // 使用更精确的字符级比较
+        // Use more precise character-level comparison
         let originalChars = Array(original)
         let correctedChars = Array(corrected)
         
@@ -133,12 +133,12 @@ struct DiffHighlightView: View {
         return differences
     }
     
-    // 最长公共子序列算法用于计算差异
+    // Longest Common Subsequence algorithm for diff calculation
     private func longestCommonSubsequence<T: Equatable>(_ a: [T], _ b: [T]) -> [DiffOperation] {
         let m = a.count
         let n = b.count
         
-        // 创建 LCS 表
+        // Create LCS table
         var lcs = Array(repeating: Array(repeating: 0, count: n + 1), count: m + 1)
         
         for i in 1...m {
@@ -151,18 +151,18 @@ struct DiffHighlightView: View {
             }
         }
         
-        // 回溯构建差异操作序列
+        // Backtrack to build diff operation sequence
         var operations: [DiffOperation] = []
         var i = m, j = n
         
         while i > 0 && j > 0 {
             if a[i-1] == b[j-1] {
-                // 找到相同的字符块
+                // Found identical character block
                 var equalCount = 1
                 i -= 1
                 j -= 1
                 
-                // 计算连续相同字符的数量
+                // Calculate count of consecutive identical characters
                 while i > 0 && j > 0 && a[i-1] == b[j-1] {
                     equalCount += 1
                     i -= 1
@@ -171,11 +171,11 @@ struct DiffHighlightView: View {
                 
                 operations.append(.equal(equalCount))
             } else if lcs[i-1][j] > lcs[i][j-1] {
-                // 删除操作
+                // Deletion operation
                 var deleteCount = 1
                 i -= 1
                 
-                // 计算连续删除字符的数量
+                // Calculate count of consecutive deleted characters
                 while i > 0 && (j == 0 || lcs[i-1][j] >= lcs[i][j-1]) {
                     deleteCount += 1
                     i -= 1
@@ -183,11 +183,11 @@ struct DiffHighlightView: View {
                 
                 operations.append(.delete(deleteCount))
             } else {
-                // 插入操作
+                // Insertion operation
                 var insertCount = 1
                 j -= 1
                 
-                // 计算连续插入字符的数量
+                // Calculate count of consecutive inserted characters
                 while j > 0 && (i == 0 || lcs[i][j-1] > lcs[i-1][j]) {
                     insertCount += 1
                     j -= 1
@@ -197,7 +197,7 @@ struct DiffHighlightView: View {
             }
         }
         
-        // 处理剩余的字符
+        // Handle remaining characters
         while i > 0 {
             operations.append(.delete(1))
             i -= 1

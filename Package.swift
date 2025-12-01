@@ -4,20 +4,15 @@ import PackageDescription
 let package = Package(
     name: "Proofreader",
     platforms: [
-        .macOS(.v12)
+        .macOS(.v14)
     ],
     products: [
         .executable(name: "Proofreader", targets: ["Proofreader"])
     ],
-    dependencies: [
-        .package(url: "https://github.com/Alamofire/Alamofire.git", from: "5.0.0")
-    ],
     targets: [
         .executableTarget(
             name: "Proofreader",
-            dependencies: [
-                "Alamofire"
-            ],
+            dependencies: [],
             path: "Sources",
             resources: [.process("../Resources")]
         ),

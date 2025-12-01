@@ -2,7 +2,7 @@
 
 A sleek menu bar utility that uses Ollama's AI models to proofread and correct text anywhere on your Mac with a global keyboard shortcut.
 
-![Proofreader Menu Bar](https://img.shields.io/badge/macOS-12.0+-blue.svg)
+![Proofreader Menu Bar](https://img.shields.io/badge/macOS-14.0+-blue.svg)
 ![Swift](https://img.shields.io/badge/Swift-5.9-orange.svg)
 ![License](https://img.shields.io/badge/License-MIT-green.svg)
 
@@ -17,7 +17,7 @@ A sleek menu bar utility that uses Ollama's AI models to proofread and correct t
 
 ## Requirements
 
-- macOS 12.0 or later
+- macOS 14.0 or later (Sonoma and newer)
 - [Ollama](`brew install ollama`) installed and running
 - At least one Ollama model pulled (e.g., `ollama pull gemma3:1b`)
 
@@ -61,9 +61,6 @@ You are a text proofreader. Your task is to correct typos and grammar errors in 
 # Clone and build
 git clone https://github.com/genequ/Proofreader.git
 cd Proofreader
-
-# Install dependencies (Alamofire)
-swift package update
 
 # Build release version
 ./build-app.sh
@@ -147,7 +144,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 ## Acknowledgments
 
 - Built with [SwiftUI](https://developer.apple.com/xcode/swiftui/)
-- Uses [Alamofire](https://github.com/Alamofire/Alamofire) for HTTP requests
+- Uses native URLSession for HTTP requests (no external dependencies)
 - Inspired by the need for quick, AI-powered proofreading
 - Icons from [SF Symbols](https://developer.apple.com/sf-symbols/)
 
