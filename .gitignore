@@ -62,3 +62,6 @@ Packages/
 # Build artifacts
 *.o
 *.a
+
+# Certificates
+*.p12

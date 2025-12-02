@@ -64,4 +64,19 @@ cat > "$APP_BUNDLE/Contents/Info.plist" << EOF
 EOF
 
 echo "App bundle created: $APP_BUNDLE"
+
+# Code Sign
+echo "Code signing..."
+CERT_NAME="ProofreaderDev"
+
+if security find-identity -v -p codesigning | grep -q "$CERT_NAME"; then
+    codesign --force --options runtime --deep --sign "$CERT_NAME" --entitlements "Entitlements.plist" "$APP_BUNDLE"
+    echo "Successfully signed with $CERT_NAME"
+else
+    echo "⚠️  Certificate '$CERT_NAME' not found."
+    echo "   Run: ./setup-cert.sh"
+    echo "   Then try building again."
+    echo "   Continuing without signing (permissions will reset on next build)..."
+fi
+
 echo "To run: open $APP_BUNDLE"
