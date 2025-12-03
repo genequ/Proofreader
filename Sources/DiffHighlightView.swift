@@ -3,6 +3,7 @@ import SwiftUI
 struct DiffHighlightView: View {
     let originalText: String
     let correctedText: String
+    let highlightIntensity: Double // 0.0 to 1.0
     
     var body: some View {
         ScrollView {
@@ -72,7 +73,7 @@ struct DiffHighlightView: View {
                             let start = attributedString.index(attributedString.startIndex, offsetByCharacters: range.lowerBound.utf16Offset(in: text))
                             let end = attributedString.index(attributedString.startIndex, offsetByCharacters: range.upperBound.utf16Offset(in: text))
                             if start < attributedString.endIndex && end <= attributedString.endIndex {
-                                attributedString[start..<end].backgroundColor = Color.red.opacity(0.2)
+                                attributedString[start..<end].backgroundColor = Color.red.opacity(highlightIntensity)
                                 attributedString[start..<end].foregroundColor = Color.red.opacity(0.8)
                             }
                         }
@@ -86,7 +87,7 @@ struct DiffHighlightView: View {
                             let start = attributedString.index(attributedString.startIndex, offsetByCharacters: range.lowerBound.utf16Offset(in: text))
                             let end = attributedString.index(attributedString.startIndex, offsetByCharacters: range.upperBound.utf16Offset(in: text))
                             if start < attributedString.endIndex && end <= attributedString.endIndex {
-                                attributedString[start..<end].backgroundColor = Color.green.opacity(0.25)
+                                attributedString[start..<end].backgroundColor = Color.green.opacity(highlightIntensity)
                                 attributedString[start..<end].foregroundColor = Color.green.opacity(0.9)
                                 attributedString[start..<end].font = .body.weight(.medium)
                             }

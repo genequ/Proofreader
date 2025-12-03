@@ -7,7 +7,8 @@ final class AppState: ObservableObject {
     @AppStorage("currentModel") var currentModel: String = "gemma3:4b"
     @AppStorage("currentPrompt") var currentPrompt: String = "You are an English proofreading assistant for non-native speakers. Correct grammar, spelling, punctuation, and word choice errors. Pay special attention to: articles (a/an/the), prepositions, verb tenses, subject-verb agreement, plural forms, and natural English phrasing. Preserve the original meaning, tone, and formatting exactly."
     @Published var availableModels: [String] = []
-    @Published var connectionStatus: ConnectionStatus = .disconnected
+    @Published var ollamaStatus: OllamaStatus = .checking
+    @Published var lastError: OllamaError? = nil
     @Published var isProcessing: Bool = false
     @Published var showProofreadingDialog: Bool = false
     @Published var correctedText: String = ""
@@ -15,25 +16,61 @@ final class AppState: ObservableObject {
     @AppStorage("ollamaURL") var ollamaURL: String = "http://127.0.0.1:11434"
     @AppStorage("keyboardShortcut") var keyboardShortcut: String = "command+."
     @AppStorage("showDiffByDefault") var showDiffByDefault: Bool = true
+    @AppStorage("highlightIntensity") var highlightIntensity: Double = 0.25
+    @AppStorage("selectedTemplate") var selectedTemplate: String = "default"
+    @AppStorage("hasCompletedOnboarding") var hasCompletedOnboarding: Bool = false
+    @AppStorage("appLaunchCount") var appLaunchCount: Int = 0
+    @AppStorage("proofreadingDialogSize") var proofreadingDialogSize: String = "800x500"
+    
+    // Processing feedback
+    @Published var currentWordCount: Int = 0
+    @Published var processingStartTime: Date?
+    @Published var elapsedTime: TimeInterval = 0
+    @Published var canRetry: Bool = false
+    
+    // Connection health
+    @Published var lastConnectionTime: Date?
+    @Published var connectionLatency: TimeInterval?
+    
+    // Managers
+    let templateManager = TemplateManager()
+    let statisticsManager = StatisticsManager()
     
     private var ollamaService = OllamaService()
     private var cancellables = Set<AnyCancellable>()
+    private var healthCheckTimer: Timer?
+    private var elapsedTimeTimer: Timer?
+    private let healthCheckInterval: TimeInterval = 30.0
     
     var statusIcon: String {
-        switch connectionStatus {
-        case .connected: return isProcessing ? "hourglass" : "checkmark.circle"
-        case .disconnected: return "xmark.circle"
-        case .error: return "exclamationmark.triangle"
+        if isProcessing {
+            return "hourglass"
+        }
+        return ollamaStatus.statusIcon
+    }
+    
+    var connectionStatus: ConnectionStatus {
+        // Backward compatibility property
+        switch ollamaStatus {
+        case .connected:
+            return .connected
+        case .checking:
+            return .disconnected
+        default:
+            return .error
         }
     }
     
     init() {
         setupKeyboardShortcut()
-        preloadOllamaConnection()
+        startHealthMonitoring()
+        appLaunchCount += 1
     }
     
     deinit {
         ShortcutManager.shared.unregisterShortcut()
+        healthCheckTimer?.invalidate()
+        elapsedTimeTimer?.invalidate()
     }
     
     private func setupKeyboardShortcut() {
@@ -42,63 +79,132 @@ final class AppState: ObservableObject {
         }
     }
     
-    func checkConnection() {
-        Task {
-            do {
-                let models = try await ollamaService.listModels()
-                await MainActor.run {
-                    self.availableModels = models
-                    self.connectionStatus = .connected
-                }
-                // Preload the model after successful connection check
-                await ollamaService.preload(model: currentModel)
-            } catch {
-                await MainActor.run {
-                    self.connectionStatus = .error
-                }
+    // MARK: - Health Monitoring
+    
+    private func startHealthMonitoring() {
+        // Initial check
+        checkOllamaStatus()
+        
+        // Periodic health checks
+        healthCheckTimer = Timer.scheduledTimer(withTimeInterval: healthCheckInterval, repeats: true) { [weak self] _ in
+            Task { @MainActor in
+                self?.checkOllamaStatus()
             }
         }
     }
     
-    private func preloadOllamaConnection() {
-        // Immediately check connection on startup
-        checkConnection()
-        
-        // Preload the service if we have a valid URL
+    func checkOllamaStatus() {
         Task {
-            await ollamaService.updateBaseURL(ollamaURL)
-            // Preload the model to improve TTFT
-            await ollamaService.preload(model: currentModel)
-            // Additional warmup - make a lightweight call to ensure service is ready
-            _ = try? await ollamaService.listModels()
+            let status = await ollamaService.checkOllamaInstallation()
+            await MainActor.run {
+                self.ollamaStatus = status
+                
+                // Update available models if connected
+                if case .connected(let models) = status {
+                    self.availableModels = models
+                    self.lastError = nil
+                    self.lastConnectionTime = Date()
+                } else if case .error(let error) = status {
+                    self.lastError = error
+                }
+            }
+            
+            // Preload model if connected
+            if case .connected = status {
+                await ollamaService.preload(model: currentModel)
+            }
         }
+    }
+    
+    // MARK: - Legacy Support
+    
+    func checkConnection() {
+        // Legacy method for backward compatibility
+        checkOllamaStatus()
     }
     
     func updateOllamaURL(_ url: String) {
         ollamaURL = url
         Task {
             await ollamaService.updateBaseURL(url)
-            checkConnection()
+            checkOllamaStatus()
         }
     }
     
     func updateKeyboardShortcut(_ shortcut: String) {
-        keyboardShortcut = shortcut
+        let formatted = formatShortcut(shortcut)
+        keyboardShortcut = formatted
         setupKeyboardShortcut()
+    }
+    
+    func formatShortcut(_ shortcut: String) -> String {
+        var formatted = shortcut.lowercased()
+        formatted = formatted.replacingOccurrences(of: "command", with: "⌘")
+        formatted = formatted.replacingOccurrences(of: "cmd", with: "⌘")
+        formatted = formatted.replacingOccurrences(of: "control", with: "⌃")
+        formatted = formatted.replacingOccurrences(of: "ctrl", with: "⌃")
+        formatted = formatted.replacingOccurrences(of: "option", with: "⌥")
+        formatted = formatted.replacingOccurrences(of: "opt", with: "⌥")
+        formatted = formatted.replacingOccurrences(of: "shift", with: "⇧")
+        return formatted
     }
     
     func handleProofreadingShortcut() {
         guard let selectedText = ClipboardManager.shared.getSelectedText() else { return }
+        startProofreading(text: selectedText)
+    }
+    
+    func proofreadClipboard() {
+        guard let clipboardText = NSPasteboard.general.string(forType: .string) else { return }
+        startProofreading(text: clipboardText)
+    }
+    
+    private func startProofreading(text: String) {
+        // Check if we can proofread
+        guard ollamaStatus.canProofread else {
+            // Show error dialog with helpful message
+            self.originalText = ""
+            self.correctedText = getErrorMessage()
+            self.showProofreadingDialog(nil)
+            return
+        }
         
         // Store original text for comparison
-        self.originalText = selectedText
+        self.originalText = text
+        
+        // Reset processing state
+        self.correctedText = ""
+        self.currentWordCount = 0
+        self.processingStartTime = Date()
+        self.elapsedTime = 0
+        self.isProcessing = true
+        self.canRetry = false
+        
+        // Start elapsed time timer
+        startElapsedTimeTimer()
         
         // Show dialog immediately with loading state
-        self.correctedText = ""
-        self.isProcessing = true
         self.showProofreadingDialog(nil)
         
-        performProofreadingWithRetry(text: selectedText)
+        performProofreadingWithRetry(text: text)
+    }
+    
+    private func getErrorMessage() -> String {
+        if let error = lastError {
+            var message = "⚠️ \(error.errorDescription ?? "Error")\n\n"
+            
+            if let reason = error.failureReason {
+                message += "\(reason)\n\n"
+            }
+            
+            if let suggestion = error.recoverySuggestion {
+                message += "\(suggestion)"
+            }
+            
+            return message
+        }
+        
+        return "⚠️ Cannot connect to Ollama\n\nPlease check Settings to configure Ollama."
     }
     
     private func performProofreadingWithRetry(text: String, retryCount: Int = 0) {
@@ -118,15 +224,36 @@ final class AppState: ObservableObject {
                 for try await chunk in stream {
                     await MainActor.run {
                         self.correctedText += chunk
-                        // Update connection status on success if needed
-                        if self.connectionStatus == .error {
-                            self.connectionStatus = .connected
-                        }
+                        // Update word count
+                        self.currentWordCount = self.correctedText.split(separator: " ").count
                     }
                 }
                 
                 await MainActor.run {
                     self.isProcessing = false
+                    self.elapsedTimeTimer?.invalidate()
+                    self.canRetry = false
+                    
+                    // Record statistics
+                    if let startTime = self.processingStartTime {
+                        let processingTime = Date().timeIntervalSince(startTime)
+                        self.statisticsManager.recordSession(
+                            originalText: text,
+                            correctedText: self.correctedText,
+                            processingTime: processingTime,
+                            modelUsed: self.currentModel,
+                            success: true
+                        )
+                    }
+                }
+            } catch let error as OllamaError {
+                await MainActor.run {
+                    self.isProcessing = false
+                    self.elapsedTimeTimer?.invalidate()
+                    self.lastError = error
+                    self.correctedText = getErrorMessage()
+                    self.canRetry = true
+                    self.statisticsManager.recordError()
                 }
             } catch {
                 if retryCount < maxRetries {
@@ -136,11 +263,10 @@ final class AppState: ObservableObject {
                 } else {
                     await MainActor.run {
                         self.isProcessing = false
-                        let errorMessage = retryCount > 0 ? 
-                            "Failed after \(retryCount + 1) attempts: \(error.localizedDescription)" :
-                            "Error: \(error.localizedDescription)"
-                        self.correctedText = errorMessage
-                        self.connectionStatus = .error
+                        self.elapsedTimeTimer?.invalidate()
+                        self.correctedText = getErrorMessage()
+                        self.canRetry = true
+                        self.statisticsManager.recordError()
                     }
                 }
             }
@@ -148,6 +274,14 @@ final class AppState: ObservableObject {
     }
     
     private func buildFinalPrompt(userPrompt: String, inputText: String) -> String {
+        // Get the template prompt if using a template
+        let basePrompt: String
+        if let template = templateManager.template(withId: selectedTemplate) {
+            basePrompt = template.prompt
+        } else {
+            basePrompt = userPrompt
+        }
+        
         let systemRules = """
         
         IMPORTANT SYSTEM RULES (ALWAYS FOLLOW):
@@ -162,7 +296,29 @@ final class AppState: ObservableObject {
         - Maintain the exact input format (Markdown stays Markdown, bullets stay bullets, plain text stays plain text)
         """
         
-        return userPrompt + systemRules + "\n\nText to proofread:\n" + inputText
+        return basePrompt + systemRules + "\n\nText to proofread:\n" + inputText
+    }
+    
+    private func startElapsedTimeTimer() {
+        elapsedTimeTimer?.invalidate()
+        elapsedTimeTimer = Timer.scheduledTimer(withTimeInterval: 0.1, repeats: true) { [weak self] _ in
+            Task { @MainActor [weak self] in
+                guard let self = self, let startTime = self.processingStartTime else { return }
+                self.elapsedTime = Date().timeIntervalSince(startTime)
+            }
+        }
+    }
+    
+    func retryProofreading() {
+        guard !originalText.isEmpty else { return }
+        canRetry = false
+        correctedText = ""
+        currentWordCount = 0
+        processingStartTime = Date()
+        elapsedTime = 0
+        isProcessing = true
+        startElapsedTimeTimer()
+        performProofreadingWithRetry(text: originalText)
     }
     
     
@@ -201,7 +357,27 @@ final class AppState: ObservableObject {
             size: NSSize(width: 320, height: 300)
         )
     }
+    
+    @objc func showStatistics(_ sender: Any?) {
+        WindowManager.shared.showWindow(
+            id: "statistics",
+            title: "Statistics",
+            content: { StatisticsView().environmentObject(self) },
+            size: NSSize(width: 600, height: 480)
+        )
+    }
+    
+    @objc func showOnboarding(_ sender: Any?) {
+        WindowManager.shared.showWindow(
+            id: "onboarding",
+            title: "Welcome to Proofreader",
+            content: { OnboardingView().environmentObject(self) },
+            size: NSSize(width: 600, height: 500)
+        )
+    }
 }
+
+// MARK: - Legacy Types
 
 enum ConnectionStatus {
     case connected, disconnected, error

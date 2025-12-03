@@ -11,9 +11,13 @@ A sleek menu bar utility that uses Ollama's AI models to proofread and correct t
 - ✨ **Global Keyboard Shortcut** - Proofread selected text anywhere (default: `⌘+.`)
 - 🚀 **Ollama Integration** - Works with any Ollama model (Gemma, Llama, Mistral, etc.)
 - 🎯 **Menu Bar Utility** - Lightweight, always accessible from your menu bar
-- ⚡ **Real-time Processing** - Instant proofreading with visual feedback
+- ⚡ **Real-time Processing** - Instant proofreading with streaming output and visual feedback
 - 🎨 **macOS Native** - Built with SwiftUI following Apple's HIG
 - 🔧 **Customizable** - Change models, prompts, and keyboard shortcuts
+- 📊 **Usage Statistics** - Track corrections, time saved, and session history
+- 🔌 **Connection Health Monitoring** - Auto-reconnect and real-time status indicators
+- 🎓 **Guided Onboarding** - Interactive setup wizard for first-time users
+- 📋 **Multiple Input Methods** - Proofread selected text or clipboard content
 
 ## Requirements
 
@@ -72,16 +76,23 @@ cd Proofreader
 ```
 Proofreader/
 ├── Sources/
-│   ├── AppState.swift          # Main state management
-│   ├── ProofreaderApp.swift    # App entry point
-│   ├── OllamaService.swift     # Ollama API integration
-│   ├── SettingsView.swift      # Configuration UI
-│   ├── ProofreadingDialog.swift # Results display
+│   ├── AppState.swift               # Main state management
+│   ├── ProofreaderApp.swift         # App entry point
+│   ├── OllamaService.swift          # Ollama API integration
+│   ├── SettingsView.swift           # Configuration UI
+│   ├── ProofreadingDialog.swift     # Results display
+│   ├── OnboardingView.swift         # First-run setup wizard
+│   ├── OllamaStatusView.swift       # Connection status indicator
+│   ├── StatisticsView.swift         # Usage analytics display
+│   ├── UsageStatistics.swift        # Statistics tracking
+│   ├── ConnectionHealthMonitor.swift # Connection health management
+│   ├── ShortcutManager.swift        # Keyboard shortcut handling
+│   ├── ClipboardManager.swift       # Clipboard operations
 │   └── ... other views
 ├── Resources/
-│   └── AppIcon.icns           # Application icon
-├── Package.swift              # Swift package configuration
-└── build-app.sh               # Build script
+│   └── AppIcon.icns                # Application icon
+├── Package.swift                   # Swift package configuration
+└── build-app.sh                    # Build script
 ```
 
 ## Troubleshooting

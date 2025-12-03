@@ -13,5 +13,19 @@ struct ProofreaderApp: App {
                 .environmentObject(appState)
         }
         .menuBarExtraStyle(.menu)
+        
+        // Hidden window for onboarding
+        WindowGroup(id: "onboarding") {
+            OnboardingView()
+                .environmentObject(appState)
+                .onAppear {
+                    // Show onboarding on first launch
+                    if !appState.hasCompletedOnboarding && appState.appLaunchCount <= 1 {
+                        appState.showOnboarding(nil)
+                    }
+                }
+        }
+        .windowStyle(.hiddenTitleBar)
+        .windowResizability(.contentSize)
     }
 }

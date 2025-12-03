@@ -3,34 +3,155 @@ import Foundation
 actor OllamaService {
     private var baseURL: String
     private let session: URLSession
+    private let timeout: TimeInterval = 10.0
     
     init(baseURL: String = "http://127.0.0.1:11434") {
         self.baseURL = baseURL
-        self.session = URLSession.shared
+        
+        let config = URLSessionConfiguration.default
+        config.timeoutIntervalForRequest = timeout
+        config.timeoutIntervalForResource = timeout
+        self.session = URLSession(configuration: config)
     }
     
     func updateBaseURL(_ url: String) {
         self.baseURL = url
     }
     
+    // MARK: - Installation & Health Checks
+    
+    /// Check if Ollama is installed on the system
+    func checkOllamaInstallation() async -> OllamaStatus {
+        // First check if we can find the ollama binary
+        let installationPath = detectInstallationPath()
+        
+        if installationPath == nil {
+            return .notInstalled
+        }
+        
+        // Binary exists, now check if service is running
+        do {
+            let isRunning = try await healthCheck()
+            if isRunning {
+                // Service is running, get models
+                let models = try await listModels()
+                return .connected(models: models)
+            } else {
+                return .installed(running: false)
+            }
+        } catch let error as OllamaError {
+            return .error(error)
+        } catch {
+            // If health check fails, assume not running
+            return .installed(running: false)
+        }
+    }
+    
+    /// Detect Ollama installation path
+    func detectInstallationPath() -> String? {
+        let possiblePaths = [
+            "/opt/homebrew/bin/ollama",
+            "/usr/local/bin/ollama",
+            "/usr/bin/ollama",
+            "~/bin/ollama"
+        ]
+        
+        let fileManager = FileManager.default
+        
+        for path in possiblePaths {
+            let expandedPath = NSString(string: path).expandingTildeInPath
+            if fileManager.fileExists(atPath: expandedPath) {
+                return expandedPath
+            }
+        }
+        
+        // Also check PATH using 'which'
+        let process = Process()
+        process.executableURL = URL(fileURLWithPath: "/usr/bin/which")
+        process.arguments = ["ollama"]
+        
+        let pipe = Pipe()
+        process.standardOutput = pipe
+        
+        do {
+            try process.run()
+            process.waitUntilExit()
+            
+            if process.terminationStatus == 0 {
+                let data = pipe.fileHandleForReading.readDataToEndOfFile()
+                if let path = String(data: data, encoding: .utf8)?.trimmingCharacters(in: .whitespacesAndNewlines),
+                   !path.isEmpty {
+                    return path
+                }
+            }
+        } catch {
+            // which command failed, continue
+        }
+        
+        return nil
+    }
+    
+    /// Perform a health check on the Ollama service
+    func healthCheck() async throws -> Bool {
+        guard let url = URL(string: "\(baseURL)/api/tags") else {
+            throw OllamaError.invalidURL(baseURL)
+        }
+        
+        do {
+            let (_, response) = try await session.data(from: url)
+            
+            guard let httpResponse = response as? HTTPURLResponse else {
+                throw OllamaError.invalidResponse
+            }
+            
+            return (200...299).contains(httpResponse.statusCode)
+        } catch let error as OllamaError {
+            throw error
+        } catch let urlError as URLError {
+            throw mapURLError(urlError)
+        } catch {
+            throw OllamaError.connectionFailed(underlying: error)
+        }
+    }
+    
+    // MARK: - API Methods
+    
     func listModels() async throws -> [String] {
         guard let url = URL(string: "\(baseURL)/api/tags") else {
-            throw URLError(.badURL)
+            throw OllamaError.invalidURL(baseURL)
         }
         
-        let (data, response) = try await session.data(from: url)
-        
-        guard let httpResponse = response as? HTTPURLResponse, (200...299).contains(httpResponse.statusCode) else {
-            throw URLError(.badServerResponse)
+        do {
+            let (data, response) = try await session.data(from: url)
+            
+            guard let httpResponse = response as? HTTPURLResponse else {
+                throw OllamaError.invalidResponse
+            }
+            
+            guard (200...299).contains(httpResponse.statusCode) else {
+                throw OllamaError.connectionFailed(underlying: URLError(.badServerResponse))
+            }
+            
+            let modelsResponse = try JSONDecoder().decode(OllamaModelsResponse.self, from: data)
+            let models = modelsResponse.models.map { $0.name }
+            
+            if models.isEmpty {
+                throw OllamaError.noModelsAvailable
+            }
+            
+            return models
+        } catch let error as OllamaError {
+            throw error
+        } catch let urlError as URLError {
+            throw mapURLError(urlError)
+        } catch {
+            throw OllamaError.connectionFailed(underlying: error)
         }
-        
-        let modelsResponse = try JSONDecoder().decode(OllamaModelsResponse.self, from: data)
-        return modelsResponse.models.map { $0.name }
     }
     
     func generate(model: String, prompt: String) async throws -> String {
         guard let url = URL(string: "\(baseURL)/api/generate") else {
-            throw URLError(.badURL)
+            throw OllamaError.invalidURL(baseURL)
         }
         
         let parameters: [String: Any] = [
@@ -44,14 +165,29 @@ actor OllamaService {
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.httpBody = try JSONSerialization.data(withJSONObject: parameters)
         
-        let (data, response) = try await session.data(for: request)
-        
-        guard let httpResponse = response as? HTTPURLResponse, (200...299).contains(httpResponse.statusCode) else {
-            throw URLError(.badServerResponse)
+        do {
+            let (data, response) = try await session.data(for: request)
+            
+            guard let httpResponse = response as? HTTPURLResponse else {
+                throw OllamaError.invalidResponse
+            }
+            
+            guard (200...299).contains(httpResponse.statusCode) else {
+                if httpResponse.statusCode == 404 {
+                    throw OllamaError.modelNotFound(model)
+                }
+                throw OllamaError.connectionFailed(underlying: URLError(.badServerResponse))
+            }
+            
+            let generateResponse = try JSONDecoder().decode(OllamaGenerateResponse.self, from: data)
+            return generateResponse.response
+        } catch let error as OllamaError {
+            throw error
+        } catch let urlError as URLError {
+            throw mapURLError(urlError)
+        } catch {
+            throw OllamaError.connectionFailed(underlying: error)
         }
-        
-        let generateResponse = try JSONDecoder().decode(OllamaGenerateResponse.self, from: data)
-        return generateResponse.response
     }
 
     func generateStream(model: String, prompt: String) -> AsyncThrowingStream<String, Error> {
@@ -165,6 +301,22 @@ actor OllamaService {
         } catch {
             // Ignore errors during preload, it's just an optimization
             print("Preload failed: \(error)")
+        }
+    }
+    
+    // MARK: - Error Mapping
+    
+    /// Map URLError to OllamaError for better user feedback
+    private func mapURLError(_ error: URLError) -> OllamaError {
+        switch error.code {
+        case .timedOut:
+            return .networkTimeout
+        case .cannotConnectToHost, .cannotFindHost, .networkConnectionLost:
+            return .notRunning
+        case .badURL:
+            return .invalidURL(baseURL)
+        default:
+            return .connectionFailed(underlying: error)
         }
     }
 }

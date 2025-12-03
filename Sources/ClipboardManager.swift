@@ -22,10 +22,11 @@ class ClipboardManager {
         keyDown?.post(tap: .cgAnnotatedSessionEventTap)
         keyUp?.post(tap: .cgAnnotatedSessionEventTap)
         
-        // Wait a bit for the copy to happen
-        usleep(100000)
+        // Wait a bit for the copy to happen (increased from 100ms to 200ms)
+        usleep(200000)
         
         let selectedText = pasteboard.string(forType: .string)
+        print("[ClipboardManager] Selected text: \(selectedText ?? "nil")")
         
         // Restore previous clipboard contents only if we actually copied something
         // and if it's different from what was there before (to avoid clearing if user just copied)

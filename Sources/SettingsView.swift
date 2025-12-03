@@ -8,48 +8,80 @@ struct SettingsView: View {
     
     var body: some View {
         VStack(spacing: 16) {
-            VStack(spacing: 16) {
-                HStack(alignment: .firstTextBaseline) {
+            // Ollama Status Section
+            OllamaStatusView(
+                status: appState.ollamaStatus,
+                lastError: appState.lastError,
+                onRefresh: {
+                    appState.checkOllamaStatus()
+                }
+            )
+            
+            Divider()
+            
+            // Settings Section
+            VStack(spacing: 14) {
+                HStack(alignment: .center) {
                     Text("URL:")
                         .font(.subheadline)
                         .foregroundColor(.secondary)
-                        .frame(width: 60, alignment: .trailing)
+                        .frame(width: 80, alignment: .trailing)
                     TextField("Ollama URL", text: $appState.ollamaURL)
                         .textFieldStyle(RoundedBorderTextFieldStyle())
                         .focused($isURLFieldFocused)
                 }
                 
-                HStack(alignment: .firstTextBaseline) {
+                HStack(alignment: .center) {
                     Text("Model:")
                         .font(.subheadline)
                         .foregroundColor(.secondary)
-                        .frame(width: 60, alignment: .trailing)
-                    Picker("", selection: $appState.currentModel) {
-                        ForEach(appState.availableModels, id: \.self) { model in
-                            Text(model).tag(model)
+                        .frame(width: 80, alignment: .trailing)
+                    
+                    if appState.availableModels.isEmpty {
+                        Text("No models available")
+                            .foregroundColor(.secondary)
+                            .font(.subheadline)
+                        Spacer()
+                    } else {
+                        Picker("", selection: $appState.currentModel) {
+                            ForEach(appState.availableModels, id: \.self) { model in
+                                Text(model).tag(model)
+                            }
                         }
+                        .pickerStyle(MenuPickerStyle())
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        Spacer()
                     }
-                    .pickerStyle(MenuPickerStyle())
-                    .frame(maxWidth: .infinity)
                 }
                 
-                HStack(alignment: .firstTextBaseline) {
+                HStack(alignment: .center) {
                     Text("Shortcut:")
                         .font(.subheadline)
                         .foregroundColor(.secondary)
-                        .frame(width: 60, alignment: .trailing)
-                    TextField("command+/", text: $appState.keyboardShortcut)
+                        .frame(width: 80, alignment: .trailing)
+                    TextField("command+.", text: $appState.keyboardShortcut)
                         .textFieldStyle(RoundedBorderTextFieldStyle())
                         .onSubmit {
                             appState.updateKeyboardShortcut(appState.keyboardShortcut)
                         }
                 }
                 
-                Button("Test Connection") {
-                    appState.checkConnection()
+                HStack(alignment: .top) {
+                    Text("Highlights:")
+                        .font(.subheadline)
+                        .foregroundColor(.secondary)
+                        .frame(width: 80, alignment: .trailing)
+                        .padding(.top, 4)
+                    
+                    VStack(alignment: .leading, spacing: 6) {
+                        Slider(value: $appState.highlightIntensity, in: 0.1...0.5)
+                            .frame(maxWidth: .infinity)
+                        
+                        Text("Intensity: \(Int(appState.highlightIntensity * 100))%")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    }
                 }
-                .buttonStyle(.bordered)
-                .controlSize(.regular)
             }
             
             HStack(spacing: 12) {
@@ -71,9 +103,9 @@ struct SettingsView: View {
             .padding(.top, 8)
         }
         .padding(20)
-        .frame(width: 400, height: 280)
+        .frame(width: 450, height: 400)
         .onAppear {
-            appState.checkConnection()
+            appState.checkOllamaStatus()
             isURLFieldFocused = true
             setupKeyMonitor()
         }
