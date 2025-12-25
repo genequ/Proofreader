@@ -234,6 +234,12 @@ final class AppState: ObservableObject {
                     self.elapsedTimeTimer?.invalidate()
                     self.canRetry = false
                     
+                    // Trim any trailing whitespace/newlines from the final result
+                    self.correctedText = self.correctedText.trimmingCharacters(in: .whitespacesAndNewlines)
+                    
+                    // Update word count one last time for accuracy
+                    self.currentWordCount = self.correctedText.split(separator: " ").count
+                    
                     // Record statistics
                     if let startTime = self.processingStartTime {
                         let processingTime = Date().timeIntervalSince(startTime)
