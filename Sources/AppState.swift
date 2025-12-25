@@ -292,7 +292,8 @@ final class AppState: ObservableObject {
         
         IMPORTANT SYSTEM RULES (ALWAYS FOLLOW):
         - ONLY fix grammar, spelling, punctuation, and word choice errors
-        - PRESERVE all original content including labels, headings, and structure (e.g. "Expected result:", "Actual result:", etc.)
+        - PRESERVE all original content including labels, headings, and structure
+        - NEVER add new content, sentences, or fields (like "Expected result:", "Correction:", etc.)
         - NEVER remove, rewrite, or restructure the original text
         - NEVER respond with acknowledgments like "I understand" or "I'm ready"
         - NEVER ask for clarification or additional input
@@ -300,6 +301,7 @@ final class AppState: ObservableObject {
         - Do not add any explanations, notes, or extra content
         - Do not output thinking process, reasoning, or internal monologue (e.g. <think> tags)
         - Maintain the exact input format (Markdown stays Markdown, bullets stay bullets, plain text stays plain text)
+        - OUTPUT ONLY THE CORRECTED TEXT AND NOTHING ELSE
         """
         
         return basePrompt + systemRules + "\n\nText to proofread:\n" + inputText
