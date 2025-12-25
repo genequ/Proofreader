@@ -8,7 +8,7 @@ A sleek menu bar utility that uses Ollama's AI models to proofread and correct t
 
 ## Features
 
-- ✨ **Global Keyboard Shortcut** - Proofread selected text anywhere (default: `⌘+.`)
+- ✨ **Global Keyboard Shortcut** - Proofread text anywhere (default: `⌘+.`). Uses native macOS Carbon HotKeys for zero-latency, beep-free operation.
 - 🚀 **Ollama Integration** - Works with any Ollama model (Gemma, Llama, Mistral, etc.)
 - 🎯 **Menu Bar Utility** - Lightweight, always accessible from your menu bar
 - ⚡ **Real-time Processing** - Instant proofreading with streaming output and visual feedback
@@ -18,6 +18,7 @@ A sleek menu bar utility that uses Ollama's AI models to proofread and correct t
 - 🔌 **Connection Health Monitoring** - Auto-reconnect and real-time status indicators
 - 🎓 **Guided Onboarding** - Interactive setup wizard for first-time users
 - 📋 **Multiple Input Methods** - Proofread selected text or clipboard content
+- 🌿 **Resource Efficient** - Automatically stops Ollama models when you quit to save RAM
 
 ## Requirements
 
@@ -108,8 +109,8 @@ Proofreader/
 - Verify Ollama is accessible: `curl http://127.0.0.1:11434/api/tags`
 
 **Keyboard shortcut not working**
-- Check Accessibility permissions in System Settings
-- Ensure Proofreader has input monitoring access
+- The app uses native Carbon HotKeys, which are very robust.
+- If it still fails, check `System Settings → Privacy & Security → Accessibility` and ensure Proofreader is enabled.
 
 ### Permissions
 On first run, macOS may require:
