@@ -5,7 +5,9 @@ struct SettingsView: View {
     @Environment(\.dismiss) private var dismiss
     @FocusState private var isURLFieldFocused: Bool
     @State private var monitor: Any?
-    
+    @State private var originalURL: String = ""
+    @State private var originalShortcut: String = ""
+
     var body: some View {
         VStack(spacing: 16) {
             // Ollama Status Section
@@ -36,12 +38,20 @@ struct SettingsView: View {
                         .font(.subheadline)
                         .foregroundColor(.secondary)
                         .frame(width: 80, alignment: .trailing)
-                    
+
                     if appState.availableModels.isEmpty {
                         Text("No models available")
                             .foregroundColor(.secondary)
                             .font(.subheadline)
                         Spacer()
+
+                        Button(action: {
+                            appState.checkOllamaStatus()
+                        }) {
+                            Image(systemName: "arrow.clockwise")
+                        }
+                        .buttonStyle(.borderless)
+                        .help("Refresh models")
                     } else {
                         Picker("", selection: $appState.currentModel) {
                             ForEach(appState.availableModels, id: \.self) { model in
@@ -50,7 +60,14 @@ struct SettingsView: View {
                         }
                         .pickerStyle(MenuPickerStyle())
                         .frame(maxWidth: .infinity, alignment: .leading)
-                        Spacer()
+
+                        Button(action: {
+                            appState.checkOllamaStatus()
+                        }) {
+                            Image(systemName: "arrow.clockwise")
+                        }
+                        .buttonStyle(.borderless)
+                        .help("Refresh models")
                     }
                 }
                 
@@ -86,12 +103,15 @@ struct SettingsView: View {
             
             HStack(spacing: 12) {
                 Spacer()
-                
+
                 Button("Cancel") {
+                    // Revert changes
+                    appState.ollamaURL = originalURL
+                    appState.keyboardShortcut = originalShortcut
                     dismiss()
                 }
                 .keyboardShortcut(.escape)
-                
+
                 Button("OK") {
                     appState.updateOllamaURL(appState.ollamaURL)
                     appState.updateKeyboardShortcut(appState.keyboardShortcut)
@@ -105,6 +125,10 @@ struct SettingsView: View {
         .padding(20)
         .frame(width: 450, height: 400)
         .onAppear {
+            // Store original values for Cancel
+            originalURL = appState.ollamaURL
+            originalShortcut = appState.keyboardShortcut
+
             appState.checkOllamaStatus()
             isURLFieldFocused = true
             setupKeyMonitor()

@@ -43,14 +43,17 @@ struct OnboardingView: View {
                     }
                     .buttonStyle(.bordered)
                 }
-                
+
                 Spacer()
-                
-                Button("Skip") {
-                    completeOnboarding()
+
+                // Hide "Skip" on the final page
+                if currentPage < totalPages - 1 {
+                    Button("Skip") {
+                        completeOnboarding()
+                    }
+                    .buttonStyle(.borderless)
                 }
-                .buttonStyle(.borderless)
-                
+
                 if currentPage < totalPages - 1 {
                     Button("Continue") {
                         withAnimation {
@@ -342,14 +345,27 @@ struct OnboardingView: View {
         default: return true
         }
     }
+
+    /// Check if Ollama is truly connected with models
+    private func isOllamaConnected() -> Bool {
+        if case .connected(let models) = appState.ollamaStatus, !models.isEmpty {
+            return true
+        }
+        return false
+    }
     
     private func checkOllamaConnection() {
         isCheckingOllama = true
-        appState.checkConnection()
-        
+        appState.checkOllamaStatus()
+
         DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
             isCheckingOllama = false
-            ollamaInstalled = appState.connectionStatus == .connected
+            // Check if Ollama is connected with available models
+            if case .connected(let models) = appState.ollamaStatus, !models.isEmpty {
+                ollamaInstalled = true
+            } else {
+                ollamaInstalled = false
+            }
         }
     }
     

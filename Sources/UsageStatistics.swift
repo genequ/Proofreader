@@ -10,13 +10,7 @@ struct UsageStatistics: Codable {
     var averageProcessingTime: TimeInterval = 0
     var firstUseDate: Date?
     var lastUseDate: Date?
-    
-    // Error type tracking
-    var grammarCorrections: Int = 0
-    var spellingCorrections: Int = 0
-    var punctuationCorrections: Int = 0
-    var styleCorrections: Int = 0
-    
+
     // Session history (last 100 sessions)
     var recentSessions: [ProofreadingSession] = []
     
@@ -99,10 +93,12 @@ struct ProofreadingSession: Codable, Identifiable {
 @MainActor
 class StatisticsManager: ObservableObject {
     @Published var statistics: UsageStatistics
-    
+
     private let statisticsKey = "usageStatistics"
     private let userDefaults = UserDefaults.standard
-    
+    private var saveTask: Task<Void, Never>?
+    private let saveDebounceDelay: TimeInterval = 2.0  // Debounce saves by 2 seconds
+
     init() {
         // Load existing statistics
         if let data = userDefaults.data(forKey: statisticsKey),
@@ -112,14 +108,36 @@ class StatisticsManager: ObservableObject {
             self.statistics = UsageStatistics()
         }
     }
-    
-    /// Save statistics to persistent storage
+
+    /// Save statistics to persistent storage (debounced)
     func save() {
+        // Cancel any pending save
+        saveTask?.cancel()
+
+        // Schedule a new save after delay
+        saveTask = Task {
+            do {
+                try await Task.sleep(nanoseconds: UInt64(saveDebounceDelay * 1_000_000_000))
+            } catch {
+                return
+            }
+
+            if !Task.isCancelled {
+                if let data = try? JSONEncoder().encode(statistics) {
+                    userDefaults.set(data, forKey: statisticsKey)
+                }
+            }
+        }
+    }
+
+    /// Force immediate save (use when app is quitting)
+    func forceSave() {
+        saveTask?.cancel()
         if let data = try? JSONEncoder().encode(statistics) {
             userDefaults.set(data, forKey: statisticsKey)
         }
     }
-    
+
     /// Record a proofreading session
     func recordSession(
         originalText: String,
@@ -131,7 +149,7 @@ class StatisticsManager: ObservableObject {
         let wordCount = originalText.split(separator: " ").count
         let characterCount = originalText.count
         let correctionCount = estimateCorrections(original: originalText, corrected: correctedText)
-        
+
         let session = ProofreadingSession(
             wordCount: wordCount,
             characterCount: characterCount,
@@ -140,42 +158,118 @@ class StatisticsManager: ObservableObject {
             modelUsed: modelUsed,
             success: success
         )
-        
+
         statistics.recordSession(session)
-        save()
+        save()  // Debounced save
     }
-    
+
     /// Record an error
     func recordError() {
         statistics.recordError()
-        save()
+        save()  // Debounced save
     }
-    
+
     /// Reset all statistics
     func reset() {
         statistics = UsageStatistics()
-        save()
+        forceSave()  // Immediate save for reset
     }
-    
-    /// Estimate number of corrections made
+
+    /// Estimate number of corrections made using character-level diff
     private func estimateCorrections(original: String, corrected: String) -> Int {
-        let originalWords = original.split(separator: " ")
-        let correctedWords = corrected.split(separator: " ")
-        
-        // Simple estimation: count different words
+        // Normalize texts to avoid counting trailing whitespace as corrections
+        let normalizedOriginal = original.trimmingCharacters(in: .whitespacesAndNewlines)
+        let normalizedCorrected = corrected.trimmingCharacters(in: .whitespacesAndNewlines)
+
+        // If texts are the same after normalization, no corrections
+        if normalizedOriginal == normalizedCorrected {
+            return 0
+        }
+
+        // Use the same LCS algorithm from DiffHighlightView for accurate counting
+        let originalChars = Array(normalizedOriginal)
+        let correctedChars = Array(normalizedCorrected)
+
+        let diff = longestCommonSubsequence(originalChars, correctedChars)
+
+        // Count insertions + deletions as corrections (excluding trailing whitespace)
         var corrections = 0
-        let maxCount = max(originalWords.count, correctedWords.count)
-        
-        for i in 0..<maxCount {
-            let origWord = i < originalWords.count ? String(originalWords[i]) : ""
-            let corrWord = i < correctedWords.count ? String(correctedWords[i]) : ""
-            
-            if origWord != corrWord {
-                corrections += 1
+        for operation in diff {
+            switch operation {
+            case .delete(let length):
+                corrections += length
+            case .insert(let length):
+                corrections += length
+            case .equal:
+                break
             }
         }
-        
-        return corrections
+
+        // Normalize by word count for better estimation
+        let wordCount = max(normalizedOriginal.split(separator: " ").count, 1)
+        return min(corrections / wordCount, wordCount)  // Cap at word count
+    }
+
+    /// Longest Common Subsequence algorithm for diff calculation
+    private func longestCommonSubsequence<T: Equatable>(_ a: [T], _ b: [T]) -> [LCSOperation] {
+        let m = a.count
+        let n = b.count
+
+        var lcs = Array(repeating: Array(repeating: 0, count: n + 1), count: m + 1)
+
+        for i in 1...m {
+            for j in 1...n {
+                if a[i-1] == b[j-1] {
+                    lcs[i][j] = lcs[i-1][j-1] + 1
+                } else {
+                    lcs[i][j] = max(lcs[i-1][j], lcs[i][j-1])
+                }
+            }
+        }
+
+        var operations: [LCSOperation] = []
+        var i = m, j = n
+
+        while i > 0 && j > 0 {
+            if a[i-1] == b[j-1] {
+                var equalCount = 1
+                i -= 1
+                j -= 1
+
+                while i > 0 && j > 0 && a[i-1] == b[j-1] {
+                    equalCount += 1
+                    i -= 1
+                    j -= 1
+                }
+
+                operations.append(.equal(equalCount))
+            } else if lcs[i-1][j] > lcs[i][j-1] {
+                operations.append(.delete(1))
+                i -= 1
+            } else {
+                operations.append(.insert(1))
+                j -= 1
+            }
+        }
+
+        while i > 0 {
+            operations.append(.delete(1))
+            i -= 1
+        }
+
+        while j > 0 {
+            operations.append(.insert(1))
+            j -= 1
+        }
+
+        return operations.reversed()
+    }
+
+    /// Local operation enum for LCS algorithm (avoids conflicts with DiffHighlightView)
+    private enum LCSOperation {
+        case equal(Int)
+        case delete(Int)
+        case insert(Int)
     }
     
     /// Get sessions from the last N days

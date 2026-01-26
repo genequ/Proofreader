@@ -1,7 +1,7 @@
 import SwiftUI
 import AppKit
 
-@available(macOS 13.0, *)
+@available(macOS 14.0, *)
 @main
 struct ProofreaderApp: App {
     @StateObject private var appState = AppState()

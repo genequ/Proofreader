@@ -4,14 +4,59 @@ actor OllamaService {
     private var baseURL: String
     private let session: URLSession
     private let timeout: TimeInterval = 10.0
-    
+
     init(baseURL: String = "http://127.0.0.1:11434") {
         self.baseURL = baseURL
-        
+
         let config = URLSessionConfiguration.default
         config.timeoutIntervalForRequest = timeout
         config.timeoutIntervalForResource = timeout
         self.session = URLSession(configuration: config)
+    }
+
+    // MARK: - Static Utilities
+
+    /// Find Ollama executable path on the system
+    static func findOllamaPath() -> String? {
+        let possiblePaths = [
+            "/opt/homebrew/bin/ollama",
+            "/usr/local/bin/ollama",
+            "/usr/bin/ollama",
+        ]
+
+        let fileManager = FileManager.default
+
+        // Check static paths first
+        for path in possiblePaths {
+            if fileManager.fileExists(atPath: path) {
+                return path
+            }
+        }
+
+        // Check PATH using 'which'
+        let process = Process()
+        process.executableURL = URL(fileURLWithPath: "/usr/bin/which")
+        process.arguments = ["ollama"]
+
+        let pipe = Pipe()
+        process.standardOutput = pipe
+
+        do {
+            try process.run()
+            process.waitUntilExit()
+
+            if process.terminationStatus == 0 {
+                let data = pipe.fileHandleForReading.readDataToEndOfFile()
+                if let path = String(data: data, encoding: .utf8)?.trimmingCharacters(in: .whitespacesAndNewlines),
+                   !path.isEmpty {
+                    return path
+                }
+            }
+        } catch {
+            // which command failed
+        }
+
+        return nil
     }
     
     func updateBaseURL(_ url: String) {
@@ -49,46 +94,8 @@ actor OllamaService {
     
     /// Detect Ollama installation path
     func detectInstallationPath() -> String? {
-        let possiblePaths = [
-            "/opt/homebrew/bin/ollama",
-            "/usr/local/bin/ollama",
-            "/usr/bin/ollama",
-            "~/bin/ollama"
-        ]
-        
-        let fileManager = FileManager.default
-        
-        for path in possiblePaths {
-            let expandedPath = NSString(string: path).expandingTildeInPath
-            if fileManager.fileExists(atPath: expandedPath) {
-                return expandedPath
-            }
-        }
-        
-        // Also check PATH using 'which'
-        let process = Process()
-        process.executableURL = URL(fileURLWithPath: "/usr/bin/which")
-        process.arguments = ["ollama"]
-        
-        let pipe = Pipe()
-        process.standardOutput = pipe
-        
-        do {
-            try process.run()
-            process.waitUntilExit()
-            
-            if process.terminationStatus == 0 {
-                let data = pipe.fileHandleForReading.readDataToEndOfFile()
-                if let path = String(data: data, encoding: .utf8)?.trimmingCharacters(in: .whitespacesAndNewlines),
-                   !path.isEmpty {
-                    return path
-                }
-            }
-        } catch {
-            // which command failed, continue
-        }
-        
-        return nil
+        // Use the shared static utility
+        return Self.findOllamaPath()
     }
     
     /// Perform a health check on the Ollama service

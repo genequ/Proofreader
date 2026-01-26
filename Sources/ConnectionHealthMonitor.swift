@@ -8,28 +8,40 @@ class ConnectionHealthMonitor: ObservableObject {
     private var healthCheckTimer: Timer?
     private var reconnectAttempts: Int = 0
     private let maxReconnectAttempts = 5
-    
+    private let maxReconnectDelay: TimeInterval = 60.0  // Cap exponential backoff at 60 seconds
+
     @Published var isHealthy: Bool = false
     @Published var lastCheckTime: Date?
     @Published var latency: TimeInterval?
     @Published var isReconnecting: Bool = false
-    
+
     init(ollamaService: OllamaService) {
         self.ollamaService = ollamaService
     }
-    
+
     /// Start periodic health checks
     func startMonitoring(interval: TimeInterval = 30.0) {
+        // Stop any existing timer
+        stopMonitoring()
+
         // Perform initial check
         Task {
             await performHealthCheck()
         }
+
+        // Set up periodic health checks
+        healthCheckTimer = Timer.scheduledTimer(withTimeInterval: interval, repeats: true) { [weak self] _ in
+            Task { @MainActor in
+                await self?.performHealthCheck()
+            }
+        }
     }
-    
+
     /// Stop monitoring
     func stopMonitoring() {
         healthCheckTimer?.invalidate()
         healthCheckTimer = nil
+        isReconnecting = false
     }
     
     /// Perform a single health check
@@ -55,21 +67,23 @@ class ConnectionHealthMonitor: ObservableObject {
         }
     }
     
-    /// Attempt to reconnect with exponential backoff
+    /// Attempt to reconnect with exponential backoff (capped at maxReconnectDelay)
     private func attemptReconnect() async {
         guard reconnectAttempts < maxReconnectAttempts else {
             self.isReconnecting = false
             return
         }
-        
+
         self.isReconnecting = true
-        
+
         reconnectAttempts += 1
-        
-        // Exponential backoff: 2^attempts seconds
-        let delay = pow(2.0, Double(reconnectAttempts))
+
+        // Exponential backoff: 2^attempts seconds, capped at maxReconnectDelay
+        let exponentialDelay = pow(2.0, Double(reconnectAttempts))
+        let delay = min(exponentialDelay, maxReconnectDelay)
+
         try? await Task.sleep(nanoseconds: UInt64(delay * 1_000_000_000))
-        
+
         await performHealthCheck()
     }
     

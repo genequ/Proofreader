@@ -55,11 +55,15 @@ class ShortcutManager {
             let eventSpec = [
                 EventTypeSpec(eventClass: OSType(kEventClassKeyboard), eventKind: UInt32(kEventHotKeyPressed))
             ]
-            
+
             var handlerRef: EventHandlerRef?
             let ptr = UnsafeMutablePointer<EventTypeSpec>.allocate(capacity: 1)
             ptr.initialize(to: eventSpec[0])
-            
+            defer {
+                ptr.deinitialize(count: 1)
+                ptr.deallocate()
+            }
+
             let status = InstallEventHandler(
                 GetApplicationEventTarget(),
                 globalHotKeyHandler,
@@ -68,9 +72,7 @@ class ShortcutManager {
                 nil,
                 &handlerRef
             )
-            
-            ptr.deallocate()
-            
+
             if status == noErr {
                 eventHandlerEntry = handlerRef
                 print("[ShortcutManager] Event handler installed")
@@ -196,6 +198,8 @@ class ShortcutManager {
         case "f8": keyCode = 0x64
         case "f9": keyCode = 0x65
         case "f10": keyCode = 0x6D
+        case "f11": keyCode = 0x67
+        case "f12": keyCode = 0x6F
         default: break
         }
         

@@ -82,9 +82,13 @@ final class AppState: ObservableObject {
     // MARK: - Health Monitoring
     
     private func startHealthMonitoring() {
+        // Invalidate any existing timer to prevent leaks
+        healthCheckTimer?.invalidate()
+        healthCheckTimer = nil
+
         // Initial check
         checkOllamaStatus()
-        
+
         // Periodic health checks
         healthCheckTimer = Timer.scheduledTimer(withTimeInterval: healthCheckInterval, repeats: true) { [weak self] _ in
             Task { @MainActor in
@@ -253,6 +257,12 @@ final class AppState: ObservableObject {
                     }
                 }
             } catch let error as OllamaError {
+                // Retry on timeout errors
+                if case .networkTimeout = error, retryCount < maxRetries {
+                    try? await Task.sleep(nanoseconds: 1_000_000_000)
+                    performProofreadingWithRetry(text: text, retryCount: retryCount + 1)
+                    return
+                }
                 await MainActor.run {
                     self.isProcessing = false
                     self.elapsedTimeTimer?.invalidate()

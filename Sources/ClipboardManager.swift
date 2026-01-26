@@ -3,52 +3,105 @@ import Carbon
 
 class ClipboardManager {
     static let shared = ClipboardManager()
-    
+
     private init() {}
-    
+
+    /// Get the currently selected text by simulating Command+C
+    /// Returns the selected text, or nil if nothing was selected
     func getSelectedText() -> String? {
-        print("[ClipboardManager] Attempting to get selected text...")
+        Log.debug("[ClipboardManager] Attempting to get selected text...")
+
         let pasteboard = NSPasteboard.general
         let previousContents = pasteboard.string(forType: .string)
-        
-        // Use Command+C to copy instead of Command+X to cut
-        let source = CGEventSource(stateID: .hidSystemState)
-        let keyDown = CGEvent(keyboardEventSource: source, virtualKey: 0x08, keyDown: true) // 0x08 = 'C' key
-        let keyUp = CGEvent(keyboardEventSource: source, virtualKey: 0x08, keyDown: false)
-        
-        keyDown?.flags = .maskCommand
-        keyUp?.flags = .maskCommand
-        
-        keyDown?.post(tap: .cgAnnotatedSessionEventTap)
-        keyUp?.post(tap: .cgAnnotatedSessionEventTap)
-        
-        // Wait a bit for the copy to happen (increased from 100ms to 200ms)
-        usleep(200000)
-        
-        let selectedText = pasteboard.string(forType: .string)
-        print("[ClipboardManager] Selected text: \(selectedText ?? "nil")")
-        
-        // Restore previous clipboard contents only if we actually copied something
-        // and if it's different from what was there before (to avoid clearing if user just copied)
-        // Note: This logic is a bit tricky because we don't know if the copy failed or if the user selected the same text.
-        // But generally, we want to return the text we just copied.
-        
-        // If we want to be polite, we should restore the clipboard if we're done.
-        // But for "get selected text", we usually leave it in the clipboard or restore it immediately.
-        // The original code restored it.
-        
-        if let previousContents = previousContents, selectedText != previousContents {
-            // Restore previous content
+        let changeCount = pasteboard.changeCount
+
+        // Simulate Command+C to copy selected text
+        guard simulateCopy() else {
+            Log.error("[ClipboardManager] Failed to simulate copy")
+            return nil
+        }
+
+        // Wait for the copy to complete asynchronously
+        Thread.sleep(forTimeInterval: 0.05)  // 50ms initial wait
+
+        // Poll for clipboard change with timeout
+        let selectedText = waitForClipboardChange(previousChangeCount: changeCount, timeout: 0.2)
+
+        if let text = selectedText {
+            Log.debug("[ClipboardManager] Selected text: \(text.prefix(50))...")
+        } else {
+            Log.debug("[ClipboardManager] No text selected")
+        }
+
+        // Restore previous clipboard contents if we successfully copied something different
+        if let previousContents = previousContents,
+           let selectedText = selectedText,
+           selectedText != previousContents {
             pasteboard.clearContents()
             pasteboard.setString(previousContents, forType: .string)
         }
-        
+
         return selectedText
     }
-    
+
+    /// Copy text to clipboard
     func copyToClipboard(_ text: String) {
         let pasteboard = NSPasteboard.general
         pasteboard.clearContents()
         pasteboard.setString(text, forType: .string)
+    }
+
+    // MARK: - Private Helpers
+
+    /// Simulate Command+C key press
+    private func simulateCopy() -> Bool {
+        guard let source = CGEventSource(stateID: .hidSystemState) else {
+            return false
+        }
+
+        guard let keyDown = CGEvent(keyboardEventSource: source, virtualKey: 0x08, keyDown: true),
+              let keyUp = CGEvent(keyboardEventSource: source, virtualKey: 0x08, keyDown: false) else {
+            return false
+        }
+
+        keyDown.flags = .maskCommand
+        keyUp.flags = .maskCommand
+
+        keyDown.post(tap: .cgAnnotatedSessionEventTap)
+        keyUp.post(tap: .cgAnnotatedSessionEventTap)
+
+        return true
+    }
+
+    /// Wait for clipboard to change with timeout
+    private func waitForClipboardChange(previousChangeCount: Int, timeout: TimeInterval) -> String? {
+        let startTime = Date()
+        let pasteboard = NSPasteboard.general
+        let pollInterval: TimeInterval = 0.01  // 10ms
+
+        while Date().timeIntervalSince(startTime) < timeout {
+            // Check if clipboard changed
+            if pasteboard.changeCount != previousChangeCount {
+                return pasteboard.string(forType: .string)
+            }
+            Thread.sleep(forTimeInterval: pollInterval)
+        }
+
+        // Timeout - check final state
+        return pasteboard.string(forType: .string)
+    }
+}
+
+// MARK: - Logging
+
+enum Log {
+    static func debug(_ message: String) {
+        #if DEBUG
+        print(message)
+        #endif
+    }
+
+    static func error(_ message: String) {
+        print("[ERROR] \(message)")
     }
 }
