@@ -7,6 +7,7 @@ struct SettingsView: View {
     @State private var monitor: Any?
     @State private var originalURL: String = ""
     @State private var originalShortcut: String = ""
+    @State private var previousModel: String = ""
 
     var body: some View {
         VStack(spacing: 16) {
@@ -108,6 +109,7 @@ struct SettingsView: View {
                     // Revert changes
                     appState.ollamaURL = originalURL
                     appState.keyboardShortcut = originalShortcut
+                    appState.currentModel = previousModel
                     dismiss()
                 }
                 .keyboardShortcut(.escape)
@@ -128,6 +130,7 @@ struct SettingsView: View {
             // Store original values for Cancel
             originalURL = appState.ollamaURL
             originalShortcut = appState.keyboardShortcut
+            previousModel = appState.currentModel
 
             appState.checkOllamaStatus()
             isURLFieldFocused = true
