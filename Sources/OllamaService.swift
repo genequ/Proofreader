@@ -197,7 +197,7 @@ actor OllamaService {
         }
     }
 
-    func generateStream(model: String, prompt: String, disableThinking: Bool = true) -> AsyncThrowingStream<String, Error> {
+    func generateStream(model: String, prompt: String) -> AsyncThrowingStream<String, Error> {
         return AsyncThrowingStream { continuation in
             Task {
                 do {
@@ -205,17 +205,12 @@ actor OllamaService {
                         throw URLError(.badURL)
                     }
 
-                    var parameters: [String: Any] = [
+                    let parameters: [String: Any] = [
                         "model": model,
                         "prompt": prompt,
                         "stream": true
                     ]
 
-                    // Disable thinking for reasoning models (Qwen, DeepSeek-R1, QwQ, etc.)
-                    if disableThinking {
-                        parameters["options"] = ["think": false]
-                    }
-                    
                     var request = URLRequest(url: url)
                     request.httpMethod = "POST"
                     request.setValue("application/json", forHTTPHeaderField: "Content-Type")
