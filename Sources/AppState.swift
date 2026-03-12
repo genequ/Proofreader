@@ -140,7 +140,15 @@ final class AppState: ObservableObject {
         keyboardShortcut = formatted
         setupKeyboardShortcut()
     }
-    
+
+    /// Stops the specified model in Ollama to free memory
+    /// - Parameter model: The model name to stop (e.g., "llama2")
+    func stopModel(_ model: String) {
+        Task {
+            await ollamaService.stop(model: model)
+        }
+    }
+
     func formatShortcut(_ shortcut: String) -> String {
         var formatted = shortcut.lowercased()
         formatted = formatted.replacingOccurrences(of: "command", with: "⌘")
