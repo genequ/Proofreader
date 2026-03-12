@@ -115,6 +115,12 @@ struct SettingsView: View {
                 .keyboardShortcut(.escape)
 
                 Button("OK") {
+                    // Stop previous model if it changed
+                    if previousModel != appState.currentModel {
+                        Task {
+                            await appState.stopModel(previousModel)
+                        }
+                    }
                     appState.updateOllamaURL(appState.ollamaURL)
                     appState.updateKeyboardShortcut(appState.keyboardShortcut)
                     dismiss()
