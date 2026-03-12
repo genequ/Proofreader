@@ -117,9 +117,7 @@ struct SettingsView: View {
                 Button("OK") {
                     // Stop previous model if it changed
                     if previousModel != appState.currentModel {
-                        Task {
-                            await appState.stopModel(previousModel)
-                        }
+                        appState.stopModel(previousModel)
                     }
                     appState.updateOllamaURL(appState.ollamaURL)
                     appState.updateKeyboardShortcut(appState.keyboardShortcut)
