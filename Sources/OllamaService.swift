@@ -197,19 +197,24 @@ actor OllamaService {
         }
     }
 
-    func generateStream(model: String, prompt: String) -> AsyncThrowingStream<String, Error> {
+    func generateStream(model: String, prompt: String, disableThinking: Bool = true) -> AsyncThrowingStream<String, Error> {
         return AsyncThrowingStream { continuation in
             Task {
                 do {
                     guard let url = URL(string: "\(baseURL)/api/generate") else {
                         throw URLError(.badURL)
                     }
-                    
-                    let parameters: [String: Any] = [
+
+                    var parameters: [String: Any] = [
                         "model": model,
                         "prompt": prompt,
                         "stream": true
                     ]
+
+                    // Disable thinking for reasoning models (Qwen, DeepSeek-R1, QwQ, etc.)
+                    if disableThinking {
+                        parameters["options"] = ["think": false]
+                    }
                     
                     var request = URLRequest(url: url)
                     request.httpMethod = "POST"
@@ -289,18 +294,18 @@ actor OllamaService {
     
     func preload(model: String) async {
         guard let url = URL(string: "\(baseURL)/api/generate") else { return }
-        
+
         // Send an empty prompt to load the model into memory
         let parameters: [String: Any] = [
             "model": model,
             "prompt": "",
             "stream": false
         ]
-        
+
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        
+
         do {
             request.httpBody = try JSONSerialization.data(withJSONObject: parameters)
             // We don't care about the response, just that the request completes (or fails after trying)
@@ -310,7 +315,33 @@ actor OllamaService {
             print("Preload failed: \(error)")
         }
     }
-    
+
+    // MARK: - Model Management
+
+    func stop(model: String) async {
+        guard let ollamaPath = OllamaService.findOllamaPath() else {
+            print("[OllamaService] Cannot stop model: Ollama not found")
+            return
+        }
+
+        let process = Process()
+        process.executableURL = URL(fileURLWithPath: ollamaPath)
+        process.arguments = ["stop", model]
+
+        do {
+            try process.run()
+            process.waitUntilExit()
+            if process.terminationStatus == 0 {
+                print("[OllamaService] Stopped model: \(model)")
+            } else {
+                print("[OllamaService] Failed to stop model \(model), exit code: \(process.terminationStatus)")
+            }
+        } catch {
+            // Silently ignore errors - stopping a model is non-critical
+            print("[OllamaService] Failed to stop model \(model): \(error)")
+        }
+    }
+
     // MARK: - Error Mapping
     
     /// Map URLError to OllamaError for better user feedback
