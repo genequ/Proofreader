@@ -10,7 +10,7 @@ final class AppStateTests: XCTestCase {
         super.setUp()
         appState = AppState()
     }
-    
+
     override func tearDown() {
         appState = nil
         super.tearDown()
@@ -92,5 +92,46 @@ final class AppStateTests: XCTestCase {
         // Restore original
         appState.updateKeyboardShortcut(originalShortcut)
         XCTAssertEqual(appState.keyboardShortcut, originalShortcut)
+    }
+
+    func testProviderSwitching() async throws {
+        let appState = await AppState()
+
+        await MainActor.run {
+            // Explicitly set initial state to ensure test isolation
+            appState.selectedProvider = .ollama
+            appState.ollamaModel = "gemma3:4b"
+            appState.lmstudioModel = ""
+
+            // Default provider should be Ollama
+            XCTAssertEqual(appState.selectedProvider, .ollama)
+            XCTAssertEqual(appState.currentModel, appState.ollamaModel)
+
+            // Switch to LM Studio
+            appState.selectedProvider = .lmstudio
+            appState.lmstudioModel = "test-model"
+            XCTAssertEqual(appState.currentModel, "test-model")
+            XCTAssertEqual(appState.currentModel, appState.lmstudioModel)
+
+            // Switch back to Ollama
+            appState.selectedProvider = .ollama
+            XCTAssertEqual(appState.currentModel, appState.ollamaModel)
+        }
+    }
+
+    func testProviderURLIndependence() async throws {
+        let appState = await AppState()
+
+        await MainActor.run {
+            // Set explicit URLs to test independence
+            appState.ollamaURL = "http://localhost:11434"
+            appState.lmstudioURL = "http://localhost:1234/v1"
+
+            appState.selectedProvider = .ollama
+            XCTAssertEqual(appState.currentProviderURL, "http://localhost:11434")
+
+            appState.selectedProvider = .lmstudio
+            XCTAssertEqual(appState.currentProviderURL, "http://localhost:1234/v1")
+        }
     }
 }
