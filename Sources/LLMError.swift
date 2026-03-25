@@ -1,7 +1,6 @@
 import Foundation
 
-/// Comprehensive error type for Ollama-related failures
-enum OllamaError: LocalizedError {
+enum LLMError: LocalizedError {
     case notInstalled
     case notRunning
     case noModelsAvailable
@@ -10,88 +9,89 @@ enum OllamaError: LocalizedError {
     case networkTimeout
     case invalidURL(String)
     case invalidResponse
-    
+
     var errorDescription: String? {
         switch self {
         case .notInstalled:
-            return "Ollama Not Installed"
+            return "Provider Not Installed"
         case .notRunning:
-            return "Ollama Not Running"
+            return "Provider Not Running"
         case .noModelsAvailable:
             return "No Models Available"
         case .connectionFailed:
             return "Connection Failed"
         case .modelNotFound(let model):
-            return "Model '\(model)' Not Found"
+            return "Model Not Found: \(model)"
         case .networkTimeout:
-            return "Connection Timeout"
+            return "Network Timeout"
         case .invalidURL(let url):
             return "Invalid URL: \(url)"
         case .invalidResponse:
-            return "Invalid Response from Ollama"
+            return "Invalid Response"
         }
     }
-    
+
     var failureReason: String? {
         switch self {
         case .notInstalled:
-            return "Ollama is not installed on your system."
+            return "The LLM provider application is not installed on this system."
         case .notRunning:
-            return "Ollama is installed but the service is not running."
+            return "The LLM provider is not running. Please start it first."
         case .noModelsAvailable:
-            return "Ollama is running but no models are downloaded."
+            return "No models are available. Please download at least one model."
         case .connectionFailed(let error):
-            return "Could not connect to Ollama: \(error.localizedDescription)"
+            return "Could not connect to the provider: \(error.localizedDescription)"
         case .modelNotFound(let model):
-            return "The selected model '\(model)' is not available."
+            return "The model '\(model)' was not found."
         case .networkTimeout:
-            return "The connection to Ollama timed out."
-        case .invalidURL(let url):
-            return "The Ollama URL '\(url)' is not valid."
+            return "The request timed out. Please check your network connection."
+        case .invalidURL:
+            return "The configured URL is not valid."
         case .invalidResponse:
-            return "Ollama returned an unexpected response."
+            return "The provider returned an invalid response."
         }
     }
-    
+
     var recoverySuggestion: String? {
         switch self {
         case .notInstalled:
-            return "Install Ollama using Homebrew:\n\nbrew install ollama"
+            return "Install the LLM provider application."
         case .notRunning:
-            return "Start Ollama with this command:\n\nollama serve"
+            return "Start the LLM provider application."
         case .noModelsAvailable:
-            return "Download a model to get started:\n\nollama pull gemma2:2b\n\nRecommended models:\n• gemma2:2b (small, fast)\n• llama3.2:3b (balanced)\n• qwen2.5:7b (larger, more accurate)"
+            return "Download and install a model in the provider application."
         case .connectionFailed:
-            return "Check that Ollama is running and accessible at the configured URL."
-        case .modelNotFound(let model):
-            return "Download the model:\n\nollama pull \(model)"
+            return "Check that the provider is running and the URL is correct."
+        case .modelNotFound:
+            return "Verify the model name or download the model."
         case .networkTimeout:
-            return "Ensure Ollama is running and not overloaded. Try restarting it:\n\nkillall ollama\nollama serve"
+            return "Try again or check your network connection."
         case .invalidURL:
-            return "Check the Ollama URL in Settings. The default is:\n\nhttp://127.0.0.1:11434"
+            return "Check the URL in Settings."
         case .invalidResponse:
-            return "Try restarting Ollama or check for updates."
+            return "Try again or restart the provider."
         }
     }
-    
+
     /// Terminal command that can fix this error (if applicable)
+    /// Note: This is provider-specific and may be overridden by provider implementations
     var helpCommand: String? {
         switch self {
         case .notInstalled:
-            return "brew install ollama"
+            return nil  // Provider-specific installation command
         case .notRunning:
-            return "ollama serve"
+            return nil  // Provider-specific start command
         case .noModelsAvailable:
-            return "ollama pull gemma2:2b"
-        case .modelNotFound(let model):
-            return "ollama pull \(model)"
+            return nil  // Provider-specific model download command
+        case .modelNotFound:
+            return nil  // Provider-specific model pull command
         case .networkTimeout:
-            return "killall ollama && ollama serve"
+            return nil  // Provider-specific restart command
         default:
             return nil
         }
     }
-    
+
     /// Severity level for UI presentation
     var severity: ErrorSeverity {
         switch self {
