@@ -251,21 +251,23 @@ final class AppState: ObservableObject {
     }
     
     private func getErrorMessage() -> String {
+        let providerName = selectedProvider.rawValue
+
         if let error = lastError {
             var message = "⚠️ \(error.errorDescription ?? "Error")\n\n"
-            
+
             if let reason = error.failureReason {
                 message += "\(reason)\n\n"
             }
-            
+
             if let suggestion = error.recoverySuggestion {
                 message += "\(suggestion)"
             }
-            
+
             return message
         }
-        
-        return "⚠️ Cannot connect to Ollama\n\nPlease check Settings to configure Ollama."
+
+        return "⚠️ Cannot connect to \(providerName)\n\nPlease check Settings to configure \(providerName)."
     }
     
     private func performProofreadingWithRetry(text: String, retryCount: Int = 0) {
