@@ -3,7 +3,7 @@ import Foundation
 @preconcurrency actor LMStudioService: @preconcurrency LLMProvider {
     private var baseURL: String
     private let session: URLSession
-    private let timeout: TimeInterval = 10.0
+    private let timeout: TimeInterval = 120.0
 
     init(baseURL: String = "http://127.0.0.1:1234/v1") {
         self.baseURL = baseURL
