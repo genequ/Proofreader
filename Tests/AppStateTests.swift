@@ -8,6 +8,13 @@ final class AppStateTests: XCTestCase {
     
     override func setUp() {
         super.setUp()
+        // Clear UserDefaults to ensure test isolation
+        let defaults = UserDefaults.standard
+        defaults.dictionaryRepresentation().keys.forEach { key in
+            defaults.removeObject(forKey: key)
+        }
+        defaults.synchronize()
+
         appState = AppState()
     }
 
@@ -75,7 +82,6 @@ final class AppStateTests: XCTestCase {
     
     func testKeyboardShortcutUpdates() {
         // Test updating keyboard shortcut - note that formatShortcut converts to symbols
-        let originalShortcut = appState.keyboardShortcut
 
         // Test command+. (becomes ⌘+.)
         appState.updateKeyboardShortcut("command+.")
@@ -88,10 +94,6 @@ final class AppStateTests: XCTestCase {
         // Test option+space (becomes ⌥+space)
         appState.updateKeyboardShortcut("option+space")
         XCTAssertEqual(appState.keyboardShortcut, "⌥+space")
-
-        // Restore original
-        appState.updateKeyboardShortcut(originalShortcut)
-        XCTAssertEqual(appState.keyboardShortcut, originalShortcut)
     }
 
     func testProviderSwitching() async throws {
