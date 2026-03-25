@@ -99,7 +99,7 @@ final class AppState: ObservableObject {
     
     func checkOllamaStatus() {
         Task {
-            let status = await ollamaService.checkOllamaInstallation()
+            let status = await ollamaService.checkInstallation()
             await MainActor.run {
                 self.ollamaStatus = status
                 

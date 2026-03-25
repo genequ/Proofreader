@@ -1,7 +1,7 @@
 import Foundation
 
 /// Protocol that all LLM providers must conform to
-protocol LLMProvider {
+@preconcurrency protocol LLMProvider {
     /// Check if the provider is installed and running
     func checkInstallation() async -> ProviderStatus
 

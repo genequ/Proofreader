@@ -1,6 +1,6 @@
 import Foundation
 
-actor OllamaService {
+@preconcurrency actor OllamaService: @preconcurrency LLMProvider {
     private var baseURL: String
     private let session: URLSession
     private let timeout: TimeInterval = 10.0
@@ -66,7 +66,7 @@ actor OllamaService {
     // MARK: - Installation & Health Checks
     
     /// Check if Ollama is installed on the system
-    func checkOllamaInstallation() async -> ProviderStatus {
+    func checkInstallation() async -> ProviderStatus {
         // First check if we can find the ollama binary
         let installationPath = detectInstallationPath()
         
