@@ -7,8 +7,8 @@ final class AppState: ObservableObject {
     @AppStorage("currentModel") var currentModel: String = "gemma3:4b"
     @AppStorage("currentPrompt") var currentPrompt: String = "You are an English proofreading assistant for non-native speakers. Correct grammar, spelling, punctuation, and word choice errors. Pay special attention to: articles (a/an/the), prepositions, verb tenses, subject-verb agreement, plural forms, and natural English phrasing. Preserve the original meaning, tone, and formatting exactly."
     @Published var availableModels: [String] = []
-    @Published var ollamaStatus: OllamaStatus = .checking
-    @Published var lastError: OllamaError? = nil
+    @Published var ollamaStatus: ProviderStatus = .checking
+    @Published var lastError: LLMError? = nil
     @Published var isProcessing: Bool = false
     @Published var showProofreadingDialog: Bool = false
     @Published var correctedText: String = ""
@@ -264,7 +264,7 @@ final class AppState: ObservableObject {
                         )
                     }
                 }
-            } catch let error as OllamaError {
+            } catch let error as LLMError {
                 // Retry on timeout errors
                 if case .networkTimeout = error, retryCount < maxRetries {
                     try? await Task.sleep(nanoseconds: 1_000_000_000)

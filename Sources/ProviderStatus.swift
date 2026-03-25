@@ -1,21 +1,21 @@
 import SwiftUI
 
-/// Represents the current state of Ollama installation and connection
-enum OllamaStatus: Equatable {
+/// Represents the current state of LLM provider installation and connection
+enum ProviderStatus: Equatable {
     case checking
     case notInstalled
     case installed(running: Bool)
     case connected(models: [String])
-    case error(OllamaError)
-    
-    /// Whether Ollama is in a healthy, usable state
+    case error(LLMError)
+
+    /// Whether the provider is in a healthy, usable state
     var isHealthy: Bool {
         if case .connected = self {
             return true
         }
         return false
     }
-    
+
     /// Whether the app can perform proofreading
     var canProofread: Bool {
         if case .connected(let models) = self, !models.isEmpty {
@@ -23,18 +23,18 @@ enum OllamaStatus: Equatable {
         }
         return false
     }
-    
+
     /// User-facing status text
     var statusText: String {
         switch self {
         case .checking:
-            return "Checking Ollama..."
+            return "Checking provider..."
         case .notInstalled:
-            return "Ollama Not Installed"
+            return "Provider Not Installed"
         case .installed(running: false):
-            return "Ollama Not Running"
+            return "Provider Not Running"
         case .installed(running: true):
-            return "Ollama Running"
+            return "Provider Running"
         case .connected(let models):
             if models.isEmpty {
                 return "No Models Available"
@@ -44,7 +44,7 @@ enum OllamaStatus: Equatable {
             return error.errorDescription ?? "Error"
         }
     }
-    
+
     /// SF Symbol icon name for this status
     var statusIcon: String {
         switch self {
@@ -62,7 +62,7 @@ enum OllamaStatus: Equatable {
             return "exclamationmark.triangle.fill"
         }
     }
-    
+
     /// Color for status indicator
     var statusColor: Color {
         switch self {
@@ -78,18 +78,18 @@ enum OllamaStatus: Equatable {
             return models.isEmpty ? .yellow : .green
         }
     }
-    
+
     /// Detailed help text for this status
     var helpText: String? {
         switch self {
         case .checking:
             return nil
         case .notInstalled:
-            return "Install Ollama to enable AI-powered proofreading."
+            return "Install the LLM provider to enable AI-powered proofreading."
         case .installed(running: false):
-            return "Start Ollama to use proofreading features."
+            return "Start the provider to use proofreading features."
         case .installed(running: true):
-            return "Ollama is running but connection not verified."
+            return "Provider is running but connection not verified."
         case .connected(let models):
             if models.isEmpty {
                 return "Download at least one model to start proofreading."
@@ -99,9 +99,9 @@ enum OllamaStatus: Equatable {
             return error.failureReason
         }
     }
-    
+
     // Equatable conformance
-    static func == (lhs: OllamaStatus, rhs: OllamaStatus) -> Bool {
+    static func == (lhs: ProviderStatus, rhs: ProviderStatus) -> Bool {
         switch (lhs, rhs) {
         case (.checking, .checking):
             return true

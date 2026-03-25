@@ -1,15 +1,15 @@
 import SwiftUI
 
-/// Reusable status indicator component for Ollama connection state
+/// Reusable status indicator component for provider connection state
 struct OllamaStatusView: View {
-    let status: OllamaStatus
-    let lastError: OllamaError?
+    let status: ProviderStatus
+    let lastError: LLMError?
     let onRefresh: () -> Void
     let onOpenSettings: (() -> Void)?
-    
+
     @State private var isExpanded: Bool = false
-    
-    init(status: OllamaStatus, lastError: OllamaError? = nil, onRefresh: @escaping () -> Void, onOpenSettings: (() -> Void)? = nil) {
+
+    init(status: ProviderStatus, lastError: LLMError? = nil, onRefresh: @escaping () -> Void, onOpenSettings: (() -> Void)? = nil) {
         self.status = status
         self.lastError = lastError
         self.onRefresh = onRefresh
@@ -78,7 +78,7 @@ struct OllamaStatusView: View {
     }
     
     @ViewBuilder
-    private func errorDetailsView(_ error: OllamaError) -> some View {
+    private func errorDetailsView(_ error: LLMError) -> some View {
         VStack(alignment: .leading, spacing: 8) {
             if let command = error.helpCommand {
                 VStack(alignment: .leading, spacing: 4) {
