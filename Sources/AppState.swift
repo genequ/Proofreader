@@ -4,7 +4,10 @@ import AppKit
 
 @MainActor
 final class AppState: ObservableObject {
-    @AppStorage("currentModel") var currentModel: String = "gemma3:4b"
+    @AppStorage("ollamaModel") var ollamaModel: String = "gemma3:4b"
+    @AppStorage("selectedProvider") var selectedProvider: LLMProviderType = .ollama
+    @AppStorage("lmstudioURL") var lmstudioURL: String = "http://127.0.0.1:1234/v1"
+    @AppStorage("lmstudioModel") var lmstudioModel: String = ""
     @AppStorage("currentPrompt") var currentPrompt: String = "You are an English proofreading assistant for non-native speakers. Correct grammar, spelling, punctuation, and word choice errors. Pay special attention to: articles (a/an/the), prepositions, verb tenses, subject-verb agreement, plural forms, and natural English phrasing. Preserve the original meaning, tone, and formatting exactly."
     @Published var availableModels: [String] = []
     @Published var ollamaStatus: ProviderStatus = .checking
@@ -35,8 +38,56 @@ final class AppState: ObservableObject {
     // Managers
     let templateManager = TemplateManager()
     let statisticsManager = StatisticsManager()
-    
+
+    var currentProvider: any LLMProvider {
+        switch selectedProvider {
+        case .ollama:
+            return ollamaService
+        case .lmstudio:
+            return lmstudioService
+        }
+    }
+
+    var currentModel: String {
+        get {
+            switch selectedProvider {
+            case .ollama:
+                return ollamaModel
+            case .lmstudio:
+                return lmstudioModel
+            }
+        }
+        set {
+            switch selectedProvider {
+            case .ollama:
+                ollamaModel = newValue
+            case .lmstudio:
+                lmstudioModel = newValue
+            }
+        }
+    }
+
+    var currentProviderURL: String {
+        get {
+            switch selectedProvider {
+            case .ollama:
+                return ollamaURL
+            case .lmstudio:
+                return lmstudioURL
+            }
+        }
+        set {
+            switch selectedProvider {
+            case .ollama:
+                ollamaURL = newValue
+            case .lmstudio:
+                lmstudioURL = newValue
+            }
+        }
+    }
+
     private var ollamaService = OllamaService()
+    private var lmstudioService = LMStudioService()
     private var cancellables = Set<AnyCancellable>()
     private var healthCheckTimer: Timer?
     private var elapsedTimeTimer: Timer?
@@ -99,11 +150,10 @@ final class AppState: ObservableObject {
     
     func checkOllamaStatus() {
         Task {
-            let status = await ollamaService.checkInstallation()
+            let status = await currentProvider.checkInstallation()
             await MainActor.run {
                 self.ollamaStatus = status
-                
-                // Update available models if connected
+
                 if case .connected(let models) = status {
                     self.availableModels = models
                     self.lastError = nil
@@ -112,10 +162,9 @@ final class AppState: ObservableObject {
                     self.lastError = error
                 }
             }
-            
-            // Preload model if connected
+
             if case .connected = status {
-                await ollamaService.preload(model: currentModel)
+                await currentProvider.preload(model: currentModel)
             }
         }
     }
@@ -128,9 +177,9 @@ final class AppState: ObservableObject {
     }
     
     func updateOllamaURL(_ url: String) {
-        ollamaURL = url
+        currentProviderURL = url
         Task {
-            await ollamaService.updateBaseURL(url)
+            await currentProvider.updateBaseURL(url)
             checkOllamaStatus()
         }
     }
@@ -145,7 +194,7 @@ final class AppState: ObservableObject {
     /// - Parameter model: The model name to stop (e.g., "llama2")
     func stopModel(_ model: String) {
         Task {
-            await ollamaService.stop(model: model)
+            await currentProvider.stop(model: model)
         }
     }
 
@@ -232,7 +281,7 @@ final class AppState: ObservableObject {
                     self.correctedText = ""
                 }
                 
-                let stream = await ollamaService.generateStream(model: currentModel, prompt: finalPrompt)
+                let stream = await currentProvider.generateStream(model: currentModel, prompt: finalPrompt)
                 for try await chunk in stream {
                     await MainActor.run {
                         self.correctedText += chunk
