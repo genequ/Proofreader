@@ -8,6 +8,7 @@ struct SettingsView: View {
     @State private var originalURL: String = ""
     @State private var originalShortcut: String = ""
     @State private var previousModel: String = ""
+    @State private var previousProvider: LLMProviderType = .ollama
 
     var body: some View {
         VStack(spacing: 16) {
@@ -21,7 +22,43 @@ struct SettingsView: View {
             )
             
             Divider()
-            
+
+            // Provider Selection Section
+            VStack(spacing: 14) {
+                HStack(alignment: .center) {
+                    Text("Provider:")
+                        .font(.subheadline)
+                        .foregroundColor(.secondary)
+                        .frame(width: 80, alignment: .trailing)
+
+                    Picker("", selection: $appState.selectedProvider) {
+                        ForEach(LLMProviderType.allCases, id: \.self) { provider in
+                            Text(provider.rawValue).tag(provider)
+                        }
+                    }
+                    .pickerStyle(MenuPickerStyle())
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .onChange(of: appState.selectedProvider) { _, newProvider in
+                        // Stop previous model if provider changed
+                        if previousProvider != newProvider {
+                            // Store the previous provider's model before switching
+                            switch previousProvider {
+                            case .ollama:
+                                // Ollama model is already stored
+                                break
+                            case .lmstudio:
+                                // LM Studio model is already stored
+                                break
+                            }
+                            previousProvider = newProvider
+                            appState.checkOllamaStatus()
+                        }
+                    }
+                }
+            }
+
+            Divider()
+
             // Settings Section
             VStack(spacing: 14) {
                 HStack(alignment: .center) {
@@ -29,7 +66,10 @@ struct SettingsView: View {
                         .font(.subheadline)
                         .foregroundColor(.secondary)
                         .frame(width: 80, alignment: .trailing)
-                    TextField("Ollama URL", text: $appState.ollamaURL)
+                    TextField("Provider URL", text: Binding(
+                        get: { appState.currentProviderURL },
+                        set: { appState.currentProviderURL = $0 }
+                    ))
                         .textFieldStyle(RoundedBorderTextFieldStyle())
                         .focused($isURLFieldFocused)
                 }
@@ -107,9 +147,10 @@ struct SettingsView: View {
 
                 Button("Cancel") {
                     // Revert changes
-                    appState.ollamaURL = originalURL
+                    appState.currentProviderURL = originalURL
                     appState.keyboardShortcut = originalShortcut
                     appState.currentModel = previousModel
+                    appState.selectedProvider = previousProvider
                     dismiss()
                 }
                 .keyboardShortcut(.escape)
@@ -119,7 +160,7 @@ struct SettingsView: View {
                     if previousModel != appState.currentModel {
                         appState.stopModel(previousModel)
                     }
-                    appState.updateOllamaURL(appState.ollamaURL)
+                    appState.updateOllamaURL(appState.currentProviderURL)
                     appState.updateKeyboardShortcut(appState.keyboardShortcut)
                     dismiss()
                 }
@@ -129,12 +170,13 @@ struct SettingsView: View {
             .padding(.top, 8)
         }
         .padding(20)
-        .frame(width: 450, height: 400)
+        .frame(width: 450, height: 480)
         .onAppear {
             // Store original values for Cancel
-            originalURL = appState.ollamaURL
+            originalURL = appState.currentProviderURL
             originalShortcut = appState.keyboardShortcut
             previousModel = appState.currentModel
+            previousProvider = appState.selectedProvider
 
             appState.checkOllamaStatus()
             isURLFieldFocused = true
