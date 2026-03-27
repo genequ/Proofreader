@@ -9,6 +9,8 @@ enum LLMError: LocalizedError {
     case networkTimeout
     case invalidURL(String)
     case invalidResponse
+    case unauthorized(String)  // Invalid API key (401)
+    case rateLimitExceeded     // API rate limit (429)
 
     var errorDescription: String? {
         switch self {
@@ -28,6 +30,10 @@ enum LLMError: LocalizedError {
             return "Invalid URL: \(url)"
         case .invalidResponse:
             return "Invalid Response"
+        case .unauthorized:
+            return "Unauthorized"
+        case .rateLimitExceeded:
+            return "Rate Limit Exceeded"
         }
     }
 
@@ -49,6 +55,10 @@ enum LLMError: LocalizedError {
             return "The configured URL is not valid."
         case .invalidResponse:
             return "The provider returned an invalid response."
+        case .unauthorized(let provider):
+            return "The API key for \(provider) is invalid or expired."
+        case .rateLimitExceeded:
+            return "The API rate limit has been exceeded. Please try again later."
         }
     }
 
@@ -70,6 +80,10 @@ enum LLMError: LocalizedError {
             return "Check the URL in Settings."
         case .invalidResponse:
             return "Try again or restart the provider."
+        case .unauthorized:
+            return "Check your API key in Settings."
+        case .rateLimitExceeded:
+            return "Wait a moment and try again, or upgrade your API plan."
         }
     }
 
@@ -97,9 +111,9 @@ enum LLMError: LocalizedError {
         switch self {
         case .notInstalled, .notRunning, .noModelsAvailable:
             return .critical
-        case .modelNotFound, .invalidURL:
+        case .unauthorized, .modelNotFound, .invalidURL:
             return .high
-        case .connectionFailed, .networkTimeout, .invalidResponse:
+        case .rateLimitExceeded, .connectionFailed, .networkTimeout, .invalidResponse:
             return .medium
         }
     }
