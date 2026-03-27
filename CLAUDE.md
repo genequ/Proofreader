@@ -35,6 +35,8 @@ This is a macOS menu bar app using SwiftUI. The app uses Ollama's local LLM API 
 ### Service Layer
 
 - `OllamaService`: Actor-based HTTP client with `listModels()`, `generate()`, `generateStream()`, and health checks. Uses `OllamaService.findOllamaPath()` for cross-platform binary detection.
+- `LMStudioService`: Actor-based HTTP client for LM Studio's OpenAI-compatible API. Methods: `checkInstallation()`, `listModels()`, `generateStream()`, `updateBaseURL()`. Connects to `http://127.0.0.1:1234/v1` by default.
+- `DeepSeekService`: Actor-based HTTP client for DeepSeek API. Uses API key authentication. Compatible with OpenAI API format. Methods: `checkInstallation()`, `listModels()`, `generateStream()`, `updateAPIKey()`.
 - `ClipboardManager`: Simulates `Cmd+C` via `CGEvent` to capture selected text, then polls clipboard for changes.
 - `StatisticsManager`: Tracks usage with debounced saves (2s delay) and `forceSave()` on quit.
 
@@ -57,6 +59,7 @@ The app uses a self-signed "ProofreaderDev" certificate. Run `./setup-cert.sh` i
 - **Timer Management**: Always invalidate timers before creating new ones to prevent memory leaks.
 - **Memory**: App stops Ollama models on quit via `AppDelegate.applicationWillTerminate`.
 - **Logging**: Use `Log.debug()`/`Log.error()` (defined in `ClipboardManager.swift`) - debug statements are `#if DEBUG` only.
+- **Third-Party Providers**: DeepSeek uses API key authentication stored in UserDefaults. API key is sent via Bearer token in Authorization header.
 
 ## Common Pitfalls
 
