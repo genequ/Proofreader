@@ -45,7 +45,10 @@ final class AppState: ObservableObject {
             return ollamaService
         case .lmstudio:
             return lmstudioService
+        case .deepseek:
+            break
         }
+        fatalError("Unexpected provider: \(selectedProvider)")
     }
 
     var currentModel: String {
@@ -55,7 +58,10 @@ final class AppState: ObservableObject {
                 return ollamaModel
             case .lmstudio:
                 return lmstudioModel
+            case .deepseek:
+                break
             }
+            fatalError("Unexpected provider: \(selectedProvider)")
         }
         set {
             switch selectedProvider {
@@ -63,6 +69,8 @@ final class AppState: ObservableObject {
                 ollamaModel = newValue
             case .lmstudio:
                 lmstudioModel = newValue
+            case .deepseek:
+                break
             }
         }
     }
@@ -74,7 +82,10 @@ final class AppState: ObservableObject {
                 return ollamaURL
             case .lmstudio:
                 return lmstudioURL
+            case .deepseek:
+                break
             }
+            fatalError("Unexpected provider: \(selectedProvider)")
         }
         set {
             switch selectedProvider {
@@ -82,6 +93,8 @@ final class AppState: ObservableObject {
                 ollamaURL = newValue
             case .lmstudio:
                 lmstudioURL = newValue
+            case .deepseek:
+                break
             }
         }
     }
