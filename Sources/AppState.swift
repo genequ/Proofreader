@@ -8,6 +8,8 @@ final class AppState: ObservableObject {
     @AppStorage("selectedProvider") var selectedProvider: LLMProviderType = .ollama
     @AppStorage("lmstudioURL") var lmstudioURL: String = "http://127.0.0.1:1234/v1"
     @AppStorage("lmstudioModel") var lmstudioModel: String = ""
+    @AppStorage("deepseekApiKey") var deepseekApiKey: String = ""
+    @AppStorage("deepseekModel") var deepseekModel: String = "deepseek-chat"
     @AppStorage("currentPrompt") var currentPrompt: String = "You are an English proofreading assistant for non-native speakers. Correct grammar, spelling, punctuation, and word choice errors. Pay special attention to: articles (a/an/the), prepositions, verb tenses, subject-verb agreement, plural forms, and natural English phrasing. Preserve the original meaning, tone, and formatting exactly."
     @Published var availableModels: [String] = []
     @Published var ollamaStatus: ProviderStatus = .checking
@@ -45,6 +47,8 @@ final class AppState: ObservableObject {
             return ollamaService
         case .lmstudio:
             return lmstudioService
+        case .deepseek:
+            return deepseekService
         }
     }
 
@@ -55,6 +59,8 @@ final class AppState: ObservableObject {
                 return ollamaModel
             case .lmstudio:
                 return lmstudioModel
+            case .deepseek:
+                return deepseekModel
             }
         }
         set {
@@ -63,6 +69,8 @@ final class AppState: ObservableObject {
                 ollamaModel = newValue
             case .lmstudio:
                 lmstudioModel = newValue
+            case .deepseek:
+                deepseekModel = newValue
             }
         }
     }
@@ -74,6 +82,8 @@ final class AppState: ObservableObject {
                 return ollamaURL
             case .lmstudio:
                 return lmstudioURL
+            case .deepseek:
+                return "https://api.deepseek.com/v1" // Fixed URL for DeepSeek
             }
         }
         set {
@@ -82,12 +92,16 @@ final class AppState: ObservableObject {
                 ollamaURL = newValue
             case .lmstudio:
                 lmstudioURL = newValue
+            case .deepseek:
+                // DeepSeek uses fixed URL, ignore setter
+                break
             }
         }
     }
 
     private var ollamaService = OllamaService()
     private var lmstudioService = LMStudioService()
+    private var deepseekService = DeepSeekService(apiKey: "")
     private var cancellables = Set<AnyCancellable>()
     private var healthCheckTimer: Timer?
     private var elapsedTimeTimer: Timer?
@@ -183,7 +197,15 @@ final class AppState: ObservableObject {
             checkOllamaStatus()
         }
     }
-    
+
+    func updateDeepSeekAPIKey(_ key: String) {
+        deepseekApiKey = key
+        Task {
+            await deepseekService.updateAPIKey(key)
+            checkOllamaStatus()
+        }
+    }
+
     func updateKeyboardShortcut(_ shortcut: String) {
         let formatted = formatShortcut(shortcut)
         keyboardShortcut = formatted

@@ -6,6 +6,7 @@ struct SettingsView: View {
     @FocusState private var isURLFieldFocused: Bool
     @State private var monitor: Any?
     @State private var originalURL: String = ""
+    @State private var originalAPIKey: String = ""
     @State private var originalShortcut: String = ""
     @State private var previousModel: String = ""
     @State private var previousProvider: LLMProviderType = .ollama
@@ -49,6 +50,9 @@ struct SettingsView: View {
                             case .lmstudio:
                                 // LM Studio model is already stored
                                 break
+                            case .deepseek:
+                                // DeepSeek model is already stored
+                                break
                             }
                             previousProvider = newProvider
                             appState.checkOllamaStatus()
@@ -61,17 +65,33 @@ struct SettingsView: View {
 
             // Settings Section
             VStack(spacing: 14) {
-                HStack(alignment: .center) {
-                    Text("URL:")
-                        .font(.subheadline)
-                        .foregroundColor(.secondary)
-                        .frame(width: 80, alignment: .trailing)
-                    TextField("Provider URL", text: Binding(
-                        get: { appState.currentProviderURL },
-                        set: { appState.currentProviderURL = $0 }
-                    ))
+                // Show URL field for Ollama and LM Studio, API Key for DeepSeek
+                if appState.selectedProvider == .deepseek {
+                    HStack(alignment: .center) {
+                        Text("API Key:")
+                            .font(.subheadline)
+                            .foregroundColor(.secondary)
+                            .frame(width: 80, alignment: .trailing)
+                        TextField("Enter API Key", text: Binding(
+                            get: { appState.deepseekApiKey },
+                            set: { appState.deepseekApiKey = $0 }
+                        ))
                         .textFieldStyle(RoundedBorderTextFieldStyle())
                         .focused($isURLFieldFocused)
+                    }
+                } else {
+                    HStack(alignment: .center) {
+                        Text("URL:")
+                            .font(.subheadline)
+                            .foregroundColor(.secondary)
+                            .frame(width: 80, alignment: .trailing)
+                        TextField("Provider URL", text: Binding(
+                            get: { appState.currentProviderURL },
+                            set: { appState.currentProviderURL = $0 }
+                        ))
+                        .textFieldStyle(RoundedBorderTextFieldStyle())
+                        .focused($isURLFieldFocused)
+                    }
                 }
                 
                 HStack(alignment: .center) {
@@ -148,6 +168,7 @@ struct SettingsView: View {
                 Button("Cancel") {
                     // Revert changes
                     appState.currentProviderURL = originalURL
+                    appState.deepseekApiKey = originalAPIKey
                     appState.keyboardShortcut = originalShortcut
                     appState.currentModel = previousModel
                     appState.selectedProvider = previousProvider
@@ -160,7 +181,12 @@ struct SettingsView: View {
                     if previousModel != appState.currentModel {
                         appState.stopModel(previousModel)
                     }
-                    appState.updateOllamaURL(appState.currentProviderURL)
+                    // Update URL or API Key based on provider
+                    if appState.selectedProvider == .deepseek {
+                        appState.updateDeepSeekAPIKey(appState.deepseekApiKey)
+                    } else {
+                        appState.updateOllamaURL(appState.currentProviderURL)
+                    }
                     appState.updateKeyboardShortcut(appState.keyboardShortcut)
                     dismiss()
                 }
@@ -174,6 +200,7 @@ struct SettingsView: View {
         .onAppear {
             // Store original values for Cancel
             originalURL = appState.currentProviderURL
+            originalAPIKey = appState.deepseekApiKey
             originalShortcut = appState.keyboardShortcut
             previousModel = appState.currentModel
             previousProvider = appState.selectedProvider
