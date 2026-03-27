@@ -127,6 +127,10 @@ final class AppState: ObservableObject {
     }
     
     init() {
+        // Initialize DeepSeek service with saved API key
+        Task {
+            await deepseekService.updateAPIKey(deepseekApiKey)
+        }
         setupKeyboardShortcut()
         startHealthMonitoring()
         appLaunchCount += 1
@@ -199,15 +203,16 @@ final class AppState: ObservableObject {
     }
 
     func updateDeepSeekAPIKey(_ key: String) {
+        let trimmedKey = key.trimmingCharacters(in: .whitespacesAndNewlines)
         #if DEBUG
         print("[AppState] updateDeepSeekAPIKey called")
-        print("[AppState]   - key length: \(key.count)")
-        print("[AppState]   - key bytes: \(key.data(using: .utf8)?.map { String(format: "%02x", $0) }.joined() ?? "nil")")
-        print("[AppState]   - key quoted: \(key.debugDescription)")
+        print("[AppState]   - original key length: \(key.count)")
+        print("[AppState]   - trimmed key length: \(trimmedKey.count)")
+        print("[AppState]   - key quoted: \(trimmedKey.debugDescription)")
         #endif
-        deepseekApiKey = key
+        deepseekApiKey = trimmedKey
         Task {
-            await deepseekService.updateAPIKey(key)
+            await deepseekService.updateAPIKey(trimmedKey)
             checkOllamaStatus()
         }
     }
