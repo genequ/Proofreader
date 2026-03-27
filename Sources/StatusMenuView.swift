@@ -27,8 +27,8 @@ struct StatusMenuView: View {
             Text("Proofreader")
                 .font(.headline)
                 .foregroundColor(.primary)
-            
-            (Text("Model: ")
+
+            (Text(appState.selectedProvider.rawValue + ": ")
                 .font(.system(size: 11))
                 .foregroundColor(.secondary) +
             Text(appState.currentModel.trimmingCharacters(in: .whitespacesAndNewlines))
@@ -36,7 +36,7 @@ struct StatusMenuView: View {
                 .foregroundColor(.primary))
                 .lineLimit(1)
 
-            
+
             HStack(spacing: 4) {
                 Circle()
                     .fill(statusColor)
@@ -171,10 +171,11 @@ struct StatusMenuView: View {
     }
     
     private var statusText: String {
+        let providerPrefix = appState.selectedProvider.rawValue
         switch appState.ollamaStatus {
-        case .connected: return "Connected"
-        case .checking: return "Checking..."
-        default: return "Error"
+        case .connected: return "\(providerPrefix): Connected"
+        case .checking: return "\(providerPrefix): Checking..."
+        default: return "\(providerPrefix): Error"
         }
     }
     

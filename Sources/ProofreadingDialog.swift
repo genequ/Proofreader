@@ -86,25 +86,25 @@ struct ProofreadingDialog: View {
                 }) {
                     Label("Copy Corrected", systemImage: "doc.on.clipboard")
                 }
-                .buttonStyle(.bordered)
+                .buttonStyle(.borderedProminent)
                 .disabled(appState.isProcessing || appState.correctedText.isEmpty)
-                
+
                 if !appState.isProcessing && !appState.originalText.isEmpty && !appState.correctedText.isEmpty {
                     Button(action: {
                         copyChangesOnly()
                     }) {
                         Label("Copy Changes", systemImage: "doc.on.doc")
                     }
-                    .buttonStyle(.borderless)
+                    .buttonStyle(.bordered)
                     .help("Copy only the corrected portions")
                 }
-                
+
                 Spacer()
-                
+
                 Button("Close") {
                     dismiss()
                 }
-                .buttonStyle(.borderedProminent)
+                .buttonStyle(.bordered)
                 .keyboardShortcut(.return)
             }
             .padding(.horizontal, 16)

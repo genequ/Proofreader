@@ -4,12 +4,13 @@ struct OnboardingView: View {
     @EnvironmentObject private var appState: AppState
     @Environment(\.dismiss) private var dismiss
     @State private var currentPage: Int = 0
-    @State private var isCheckingOllama: Bool = false
-    @State private var ollamaInstalled: Bool = false
-    @State private var selectedModel: String = "gemma3:4b"
+    @State private var isCheckingProvider: Bool = false
+    @State private var providerConnected: Bool = false
+    @State private var selectedProvider: LLMProviderType = .ollama
+    @State private var selectedModel: String = ""
     @State private var customShortcut: String = "command+."
-    
-    private let totalPages = 5
+
+    private let totalPages = 6  // Added provider selection page
     
     var body: some View {
         VStack(spacing: 0) {
@@ -26,10 +27,11 @@ struct OnboardingView: View {
             // Content
             TabView(selection: $currentPage) {
                 welcomePage.tag(0)
-                ollamaSetupPage.tag(1)
-                modelSelectionPage.tag(2)
-                shortcutSetupPage.tag(3)
-                readyPage.tag(4)
+                providerSelectionPage.tag(1)
+                providerSetupPage.tag(2)
+                modelSelectionPage.tag(3)
+                shortcutSetupPage.tag(4)
+                readyPage.tag(5)
             }
             .tabViewStyle(.automatic)
             
@@ -92,7 +94,7 @@ struct OnboardingView: View {
             
             VStack(alignment: .leading, spacing: 12) {
                 FeatureRow(icon: "keyboard", title: "Global Keyboard Shortcut", description: "Proofread text anywhere with a hotkey")
-                FeatureRow(icon: "cpu", title: "Ollama Integration", description: "Works with any Ollama AI model")
+                FeatureRow(icon: "square.stack.3d.up", title: "Multiple AI Providers", description: "Works with Ollama, LM Studio, or DeepSeek")
                 FeatureRow(icon: "bolt.fill", title: "Real-time Processing", description: "Instant proofreading with visual feedback")
             }
             .padding()
@@ -104,32 +106,91 @@ struct OnboardingView: View {
         .padding()
     }
     
-    private var ollamaSetupPage: some View {
+    private var providerSelectionPage: some View {
         VStack(spacing: 24) {
             Spacer()
-            
-            Image(systemName: ollamaInstalled ? "checkmark.circle.fill" : "server.rack")
+
+            Image(systemName: "square.stack.3d.up")
                 .font(.system(size: 64))
-                .foregroundColor(ollamaInstalled ? .green : .accentColor)
-            
-            Text("Ollama Setup")
+                .foregroundColor(.accentColor)
+
+            Text("Choose Your AI Provider")
                 .font(.system(.title, design: .rounded))
                 .fontWeight(.bold)
-            
-            Text("Proofreader requires Ollama to be installed and running")
+
+            Text("Select how you want to power proofreading. Each option has different requirements.")
                 .font(.body)
                 .foregroundColor(.secondary)
                 .multilineTextAlignment(.center)
-            
+
+            VStack(spacing: 12) {
+                ForEach(LLMProviderType.allCases, id: \.self) { provider in
+                    Button(action: {
+                        selectedProvider = provider
+                    }) {
+                        HStack(spacing: 16) {
+                            Image(systemName: providerIcon(for: provider))
+                                .font(.title2)
+                                .foregroundColor(selectedProvider == provider ? .white : .accentColor)
+                                .frame(width: 32)
+
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text(provider.rawValue)
+                                    .font(.headline)
+                                    .foregroundColor(selectedProvider == provider ? .white : .primary)
+
+                                Text(providerDescription(for: provider))
+                                    .font(.caption)
+                                    .foregroundColor(selectedProvider == provider ? .white.opacity(0.8) : .secondary)
+                            }
+
+                            Spacer()
+
+                            if selectedProvider == provider {
+                                Image(systemName: "checkmark.circle.fill")
+                                    .foregroundColor(.white)
+                            }
+                        }
+                        .padding()
+                        .background(selectedProvider == provider ? Color.accentColor : Color(NSColor.controlBackgroundColor))
+                        .cornerRadius(12)
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+            .padding()
+
+            Spacer()
+        }
+        .padding()
+    }
+
+    private var providerSetupPage: some View {
+        VStack(spacing: 24) {
+            Spacer()
+
+            Image(systemName: providerConnected ? "checkmark.circle.fill" : providerIcon(for: selectedProvider))
+                .font(.system(size: 64))
+                .foregroundColor(providerConnected ? .green : .accentColor)
+
+            Text("\(selectedProvider.rawValue) Setup")
+                .font(.system(.title, design: .rounded))
+                .fontWeight(.bold)
+
+            Text(providerSetupInstructions(for: selectedProvider))
+                .font(.body)
+                .foregroundColor(.secondary)
+                .multilineTextAlignment(.center)
+
             VStack(spacing: 16) {
-                if isCheckingOllama {
+                if isCheckingProvider {
                     ProgressView()
                         .scaleEffect(1.2)
-                } else if ollamaInstalled {
+                } else if providerConnected {
                     HStack(spacing: 12) {
                         Image(systemName: "checkmark.circle.fill")
                             .foregroundColor(.green)
-                        Text("Ollama is running!")
+                        Text("\(selectedProvider.rawValue) is ready!")
                             .fontWeight(.medium)
                     }
                     .padding()
@@ -141,34 +202,77 @@ struct OnboardingView: View {
                         HStack(spacing: 12) {
                             Image(systemName: "exclamationmark.circle.fill")
                                 .foregroundColor(.orange)
-                            Text("Ollama not detected")
+                            Text(providerErrorMessage(for: selectedProvider))
                                 .fontWeight(.medium)
                         }
                         .padding()
                         .frame(maxWidth: .infinity)
                         .background(Color.orange.opacity(0.1))
                         .cornerRadius(8)
-                        
-                        Button("Download Ollama") {
-                            if let url = URL(string: "https://ollama.ai/download") {
+
+                        if let url = providerDownloadURL(for: selectedProvider) {
+                            Button("Get \(selectedProvider.rawValue)") {
                                 NSWorkspace.shared.open(url)
                             }
+                            .buttonStyle(.bordered)
                         }
-                        .buttonStyle(.bordered)
                     }
                 }
-                
-                Button(ollamaInstalled ? "Check Again" : "Check Connection") {
-                    checkOllamaConnection()
+
+                Button(providerConnected ? "Check Again" : "Check Connection") {
+                    checkProviderConnection()
                 }
                 .buttonStyle(.borderedProminent)
             }
-            
+
             Spacer()
         }
         .padding()
         .onAppear {
-            checkOllamaConnection()
+            checkProviderConnection()
+        }
+    }
+
+    private func providerIcon(for provider: LLMProviderType) -> String {
+        switch provider {
+        case .ollama: return "server.rack"
+        case .lmstudio: return "laptopcomputer"
+        case .deepseek: return "cloud"
+        }
+    }
+
+    private func providerDescription(for provider: LLMProviderType) -> String {
+        switch provider {
+        case .ollama: return "Run AI models locally on your Mac"
+        case .lmstudio: return "Local models with a friendly interface"
+        case .deepseek: return "Cloud API, no installation needed"
+        }
+    }
+
+    private func providerSetupInstructions(for provider: LLMProviderType) -> String {
+        switch provider {
+        case .ollama:
+            return "Install and start Ollama, then download a model."
+        case .lmstudio:
+            return "Install LM Studio, enable the API server, and load a model."
+        case .deepseek:
+            return "Get your API key from platform.deepseek.com"
+        }
+    }
+
+    private func providerErrorMessage(for provider: LLMProviderType) -> String {
+        switch provider {
+        case .ollama: return "Ollama not detected"
+        case .lmstudio: return "LM Studio not connected"
+        case .deepseek: return "API key invalid or missing"
+        }
+    }
+
+    private func providerDownloadURL(for provider: LLMProviderType) -> URL? {
+        switch provider {
+        case .ollama: return URL(string: "https://ollama.ai/download")
+        case .lmstudio: return URL(string: "https://lmstudio.ai/")
+        case .deepseek: return URL(string: "https://platform.deepseek.com/")
         }
     }
     
@@ -307,79 +411,87 @@ struct OnboardingView: View {
     private var readyPage: some View {
         VStack(spacing: 24) {
             Spacer()
-            
+
             Image(systemName: "checkmark.seal.fill")
                 .font(.system(size: 64))
                 .foregroundColor(.green)
-            
+
             Text("You're All Set!")
                 .font(.system(.title, design: .rounded))
                 .fontWeight(.bold)
-            
+
             Text("Proofreader is ready to use")
                 .font(.title3)
                 .foregroundColor(.secondary)
-            
+
             VStack(alignment: .leading, spacing: 12) {
-                SummaryRow(label: "Ollama Status", value: ollamaInstalled ? "Connected" : "Not connected", isGood: ollamaInstalled)
-                SummaryRow(label: "Selected Model", value: selectedModel, isGood: !appState.availableModels.isEmpty)
+                SummaryRow(label: "Provider", value: selectedProvider.rawValue, isGood: true)
+                SummaryRow(label: "Status", value: providerConnected ? "Connected" : "Not connected", isGood: providerConnected)
+                SummaryRow(label: "Selected Model", value: selectedModel.isEmpty ? "None" : selectedModel, isGood: !appState.availableModels.isEmpty)
                 SummaryRow(label: "Keyboard Shortcut", value: customShortcut, isGood: true)
             }
             .padding()
             .background(Color(NSColor.controlBackgroundColor))
             .cornerRadius(12)
-            
+
             Text("You can change these settings anytime from the menu bar")
                 .font(.caption)
                 .foregroundColor(.secondary)
-            
+
             Spacer()
         }
         .padding()
     }
-    
+
     private var canContinue: Bool {
         switch currentPage {
-        case 1: return ollamaInstalled
-        case 2: return !appState.availableModels.isEmpty
+        case 1: return true  // Provider selection - always can continue
+        case 2: return providerConnected  // Provider setup
+        case 3: return !appState.availableModels.isEmpty  // Model selection
         default: return true
         }
     }
 
-    /// Check if Ollama is truly connected with models
-    private func isOllamaConnected() -> Bool {
+    /// Check if provider is truly connected with models
+    private func isProviderConnected() -> Bool {
         if case .connected(let models) = appState.ollamaStatus, !models.isEmpty {
             return true
         }
         return false
     }
-    
-    private func checkOllamaConnection() {
-        isCheckingOllama = true
+
+    private func checkProviderConnection() {
+        // First update the provider in appState
+        appState.selectedProvider = selectedProvider
+
+        isCheckingProvider = true
         appState.checkOllamaStatus()
 
         DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
-            isCheckingOllama = false
-            // Check if Ollama is connected with available models
+            isCheckingProvider = false
+            // Check if provider is connected with available models
             if case .connected(let models) = appState.ollamaStatus, !models.isEmpty {
-                ollamaInstalled = true
+                providerConnected = true
+                // Auto-select first model
+                selectedModel = models.first ?? ""
             } else {
-                ollamaInstalled = false
+                providerConnected = false
             }
         }
     }
-    
+
     private func completeOnboarding() {
         // Apply settings
-        if !appState.availableModels.isEmpty {
+        appState.selectedProvider = selectedProvider
+        if !appState.availableModels.isEmpty && !selectedModel.isEmpty {
             appState.currentModel = selectedModel
         }
         appState.updateKeyboardShortcut(customShortcut)
-        
+
         // Mark onboarding as complete
         appState.hasCompletedOnboarding = true
         appState.appLaunchCount += 1
-        
+
         dismiss()
     }
 }

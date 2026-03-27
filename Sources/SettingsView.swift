@@ -10,6 +10,9 @@ struct SettingsView: View {
     @State private var originalShortcut: String = ""
     @State private var previousModel: String = ""
     @State private var previousProvider: LLMProviderType = .ollama
+    @State private var showToast: Bool = false
+    @State private var toastMessage: String = ""
+    @State private var toastIcon: String = "checkmark.circle.fill"
 
     var body: some View {
         VStack(spacing: 16) {
@@ -19,7 +22,8 @@ struct SettingsView: View {
                 lastError: appState.lastError,
                 onRefresh: {
                     appState.checkOllamaStatus()
-                }
+                },
+                provider: appState.selectedProvider
             )
             
             Divider()
@@ -56,6 +60,18 @@ struct SettingsView: View {
                             }
                             previousProvider = newProvider
                             appState.checkOllamaStatus()
+
+                            // Auto-select first available model after a brief delay for status check
+                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                                if !appState.availableModels.isEmpty {
+                                    // Check if current model is valid for new provider
+                                    let currentModel = appState.currentModel
+                                    if !appState.availableModels.contains(currentModel) {
+                                        // Auto-select first available model
+                                        appState.currentModel = appState.availableModels.first ?? ""
+                                    }
+                                }
+                            }
                         }
                     }
                 }
@@ -185,7 +201,16 @@ struct SettingsView: View {
                         appState.updateOllamaURL(appState.currentProviderURL)
                     }
                     appState.updateKeyboardShortcut(appState.keyboardShortcut)
-                    dismiss()
+
+                    // Show success toast
+                    toastMessage = "Settings saved"
+                    toastIcon = "checkmark.circle.fill"
+                    showToast = true
+
+                    // Dismiss after brief delay to show toast
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                        dismiss()
+                    }
                 }
                 .buttonStyle(.borderedProminent)
                 .keyboardShortcut(.return)
@@ -209,6 +234,7 @@ struct SettingsView: View {
         .onDisappear {
             removeKeyMonitor()
         }
+        .toast(isShowing: $showToast, message: toastMessage, icon: toastIcon)
     }
     
     private func setupKeyMonitor() {

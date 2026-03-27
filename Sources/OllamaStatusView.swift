@@ -6,14 +6,16 @@ struct OllamaStatusView: View {
     let lastError: LLMError?
     let onRefresh: () -> Void
     let onOpenSettings: (() -> Void)?
+    let provider: LLMProviderType
 
     @State private var isExpanded: Bool = false
 
-    init(status: ProviderStatus, lastError: LLMError? = nil, onRefresh: @escaping () -> Void, onOpenSettings: (() -> Void)? = nil) {
+    init(status: ProviderStatus, lastError: LLMError? = nil, onRefresh: @escaping () -> Void, onOpenSettings: (() -> Void)? = nil, provider: LLMProviderType = .ollama) {
         self.status = status
         self.lastError = lastError
         self.onRefresh = onRefresh
         self.onOpenSettings = onOpenSettings
+        self.provider = provider
     }
     
     var body: some View {
@@ -176,43 +178,109 @@ struct OllamaStatusView: View {
     
     private func showInstallGuide() {
         let alert = NSAlert()
-        alert.messageText = "Install Ollama"
-        alert.informativeText = "Install Ollama using Homebrew:\n\nbrew install ollama\n\nAfter installation, start it with:\n\nollama serve"
-        alert.alertStyle = .informational
-        alert.addButton(withTitle: "Copy Install Command")
-        alert.addButton(withTitle: "OK")
-        
-        let response = alert.runModal()
-        if response == .alertFirstButtonReturn {
-            copyToClipboard("brew install ollama")
+
+        switch provider {
+        case .ollama:
+            alert.messageText = "Install Ollama"
+            alert.informativeText = "Install Ollama using Homebrew:\n\nbrew install ollama\n\nAfter installation, start it with:\n\nollama serve"
+            alert.addButton(withTitle: "Copy Install Command")
+            alert.addButton(withTitle: "OK")
+            let response = alert.runModal()
+            if response == .alertFirstButtonReturn {
+                copyToClipboard("brew install ollama")
+            }
+
+        case .lmstudio:
+            alert.messageText = "Install LM Studio"
+            alert.informativeText = "Download LM Studio from:\n\nhttps://lmstudio.ai/\n\nAfter installation, start the app and enable the API server in settings."
+            alert.alertStyle = .informational
+            alert.addButton(withTitle: "Open Website")
+            alert.addButton(withTitle: "OK")
+            let response = alert.runModal()
+            if response == .alertFirstButtonReturn, let url = URL(string: "https://lmstudio.ai/") {
+                NSWorkspace.shared.open(url)
+            }
+
+        case .deepseek:
+            alert.messageText = "DeepSeek API Key Required"
+            alert.informativeText = "To use DeepSeek, you need an API key:\n\n1. Get your key from: https://platform.deepseek.com/\n2. Enter the key in Settings\n3. Select a model from the dropdown"
+            alert.alertStyle = .informational
+            alert.addButton(withTitle: "Open Website")
+            alert.addButton(withTitle: "OK")
+            let response = alert.runModal()
+            if response == .alertFirstButtonReturn, let url = URL(string: "https://platform.deepseek.com/") {
+                NSWorkspace.shared.open(url)
+            }
         }
     }
-    
+
     private func showStartGuide() {
         let alert = NSAlert()
-        alert.messageText = "Start Ollama"
-        alert.informativeText = "Start Ollama with this command:\n\nollama serve\n\nRun this in a terminal and keep it running while using Proofreader."
-        alert.alertStyle = .informational
-        alert.addButton(withTitle: "Copy Command")
-        alert.addButton(withTitle: "OK")
-        
-        let response = alert.runModal()
-        if response == .alertFirstButtonReturn {
-            copyToClipboard("ollama serve")
+
+        switch provider {
+        case .ollama:
+            alert.messageText = "Start Ollama"
+            alert.informativeText = "Start Ollama with this command:\n\nollama serve\n\nRun this in a terminal and keep it running while using Proofreader."
+            alert.alertStyle = .informational
+            alert.addButton(withTitle: "Copy Command")
+            alert.addButton(withTitle: "OK")
+            let response = alert.runModal()
+            if response == .alertFirstButtonReturn {
+                copyToClipboard("ollama serve")
+            }
+
+        case .lmstudio:
+            alert.messageText = "Enable LM Studio API Server"
+            alert.informativeText = "1. Open LM Studio\n2. Go to Settings (gear icon)\n3. Enable \"Enable Server\"\n4. Use default port 1234"
+            alert.alertStyle = .informational
+            alert.addButton(withTitle: "OK")
+            alert.runModal()
+
+        case .deepseek:
+            alert.messageText = "Check API Key"
+            alert.informativeText = "Make sure your API key is valid and entered correctly in Settings.\n\nGet your key from: https://platform.deepseek.com/"
+            alert.alertStyle = .informational
+            alert.addButton(withTitle: "Open Settings")
+            alert.addButton(withTitle: "OK")
+            let response = alert.runModal()
+            if response == .alertFirstButtonReturn {
+                onOpenSettings?()
+            }
         }
     }
-    
+
     private func showModelGuide() {
         let alert = NSAlert()
-        alert.messageText = "Download a Model"
-        alert.informativeText = "Download a model to get started:\n\nollama pull gemma2:2b\n\nRecommended models:\n• gemma2:2b (small, fast)\n• llama3.2:3b (balanced)\n• qwen2.5:7b (larger, more accurate)"
-        alert.alertStyle = .informational
-        alert.addButton(withTitle: "Copy Command")
-        alert.addButton(withTitle: "OK")
-        
-        let response = alert.runModal()
-        if response == .alertFirstButtonReturn {
-            copyToClipboard("ollama pull gemma2:2b")
+
+        switch provider {
+        case .ollama:
+            alert.messageText = "Download a Model"
+            alert.informativeText = "Download a model to get started:\n\nollama pull gemma2:2b\n\nRecommended models:\n• gemma2:2b (small, fast)\n• llama3.2:3b (balanced)\n• qwen2.5:7b (larger, more accurate)"
+            alert.alertStyle = .informational
+            alert.addButton(withTitle: "Copy Command")
+            alert.addButton(withTitle: "OK")
+            let response = alert.runModal()
+            if response == .alertFirstButtonReturn {
+                copyToClipboard("ollama pull gemma2:2b")
+            }
+
+        case .lmstudio:
+            alert.messageText = "Load a Model in LM Studio"
+            alert.informativeText = "1. Open LM Studio\n2. Go to the AI Models tab\n3. Search and download a model\n4. Load the model for chatting\n\nThe model will be available in Proofreader once loaded."
+            alert.alertStyle = .informational
+            alert.addButton(withTitle: "OK")
+            alert.runModal()
+
+        case .deepseek:
+            alert.messageText = "Select a Model"
+            alert.informativeText = "DeepSeek models should appear in the Model dropdown in Settings.\n\nAvailable models:\n• deepseek-chat\n• deepseek-coder\n\nIf no models appear, check your API key."
+            alert.alertStyle = .informational
+            alert.addButton(withTitle: "Open Settings")
+            alert.addButton(withTitle: "OK")
+            let response = alert.runModal()
+            if response == .alertFirstButtonReturn {
+                onOpenSettings?()
+            }
         }
     }
 }

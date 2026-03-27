@@ -1,6 +1,11 @@
 # Proofreader - AI-Powered Text Proofreading for macOS
 
-A sleek menu bar utility that uses Ollama's AI models to proofread and correct text anywhere on your Mac with a global keyboard shortcut.
+A sleek menu bar utility that uses AI models to proofread and correct text anywhere on your Mac with a global keyboard shortcut.
+
+**Supports multiple AI providers:**
+- 🦙 **Ollama** - Run models locally on your Mac
+- 💻 **LM Studio** - Local models with a friendly interface
+- ☁️ **DeepSeek** - Cloud API, no installation needed
 
 ![Proofreader Menu Bar](https://img.shields.io/badge/macOS-14.0+-blue.svg)
 ![Swift](https://img.shields.io/badge/Swift-5.9-orange.svg)
@@ -9,22 +14,23 @@ A sleek menu bar utility that uses Ollama's AI models to proofread and correct t
 ## Features
 
 - ✨ **Global Keyboard Shortcut** - Proofread text anywhere (default: `⌘+.`). Uses native macOS Carbon HotKeys for zero-latency, beep-free operation.
-- 🚀 **Ollama Integration** - Works with any Ollama model (Gemma, Llama, Mistral, etc.)
+- 🔄 **Multiple AI Providers** - Choose between Ollama (local), LM Studio (local), or DeepSeek (cloud)
 - 🎯 **Menu Bar Utility** - Lightweight, always accessible from your menu bar
 - ⚡ **Real-time Processing** - Instant proofreading with streaming output and visual feedback
 - 🎨 **macOS Native** - Built with SwiftUI following Apple's HIG
-- 🔧 **Customizable** - Change models, prompts, and keyboard shortcuts
+- 🔧 **Customizable** - Change providers, models, prompts, and keyboard shortcuts
 - 📊 **Usage Statistics** - Track corrections, time saved, and session history
 - 🔌 **Connection Health Monitoring** - Auto-reconnect and real-time status indicators
 - 🎓 **Guided Onboarding** - Interactive setup wizard for first-time users
 - 📋 **Multiple Input Methods** - Proofread selected text or clipboard content
-- 🌿 **Resource Efficient** - Automatically stops Ollama models when you quit to save RAM
 
 ## Requirements
 
 - macOS 14.0 or later (Sonoma and newer)
-- [Ollama](`brew install ollama`) installed and running
-- At least one Ollama model pulled (e.g., `ollama pull gemma3:1b`)
+- One of the following AI providers:
+  - **Ollama**: Install with `brew install ollama` and pull a model
+  - **LM Studio**: Download from [lmstudio.ai](https://lmstudio.ai/)
+  - **DeepSeek**: Get API key from [platform.deepseek.com](https://platform.deepseek.com/)
 
 
 ## Usage
@@ -44,10 +50,14 @@ A sleek menu bar utility that uses Ollama's AI models to proofread and correct t
 ## Configuration
 
 ### Settings Dialog
-- **Ollama URL**: `http://127.0.0.1:11434` (default)
-- **Model Selection**: Choose from available Ollama models
+- **Provider Selection**: Choose between Ollama, LM Studio, or DeepSeek
+- **Provider URL/API Key**: Configure connection settings for your chosen provider
+  - Ollama: `http://127.0.0.1:11434` (default)
+  - LM Studio: `http://127.0.0.1:1234/v1` (default)
+  - DeepSeek: Enter your API key
+- **Model Selection**: Choose from available models for your selected provider
 - **Keyboard Shortcut**: Customize the global hotkey
-- **Test Connection**: Verify Ollama connectivity
+- **Test Connection**: Verify provider connectivity
 
 ### Default Prompt
 ```
@@ -79,14 +89,15 @@ Proofreader/
 ├── Sources/
 │   ├── AppState.swift               # Main state management
 │   ├── ProofreaderApp.swift         # App entry point
+│   ├── LLMProvider.swift            # Provider protocol
 │   ├── OllamaService.swift          # Ollama API integration
+│   ├── LMStudioService.swift        # LM Studio API integration
+│   ├── DeepSeekService.swift        # DeepSeek API integration
 │   ├── SettingsView.swift           # Configuration UI
 │   ├── ProofreadingDialog.swift     # Results display
 │   ├── OnboardingView.swift         # First-run setup wizard
-│   ├── OllamaStatusView.swift       # Connection status indicator
+│   ├── ProviderStatusView.swift     # Connection status indicator
 │   ├── StatisticsView.swift         # Usage analytics display
-│   ├── UsageStatistics.swift        # Statistics tracking
-│   ├── ConnectionHealthMonitor.swift # Connection health management
 │   ├── ShortcutManager.swift        # Keyboard shortcut handling
 │   ├── ClipboardManager.swift       # Clipboard operations
 │   └── ... other views
@@ -101,12 +112,16 @@ Proofreader/
 ### Common Issues
 
 **"No models available"**
-- Ensure Ollama is running: `ollama serve`
-- Pull at least one model: `ollama pull gemma3:1b`
+- **Ollama**: Ensure Ollama is running (`ollama serve`) and pull a model (`ollama pull gemma3:1b`)
+- **LM Studio**: Open LM Studio, load a model, and ensure the API server is enabled
+- **DeepSeek**: Verify your API key is valid and check your internet connection
 
 **Connection errors**
-- Check Ollama URL in Settings (default: `http://127.0.0.1:11434`)
-- Verify Ollama is accessible: `curl http://127.0.0.1:11434/api/tags`
+- Check that your selected provider is running/configured correctly
+- Verify the URL or API key in Settings
+- For Ollama: `curl http://127.0.0.1:11434/api/tags`
+- For LM Studio: Ensure "Enable Server" is on in settings
+- For DeepSeek: Check that your API key is valid at [platform.deepseek.com](https://platform.deepseek.com/)
 
 **Keyboard shortcut not working**
 - The app uses native Carbon HotKeys, which are very robust.
@@ -128,9 +143,22 @@ Grant these in: `System Settings → Privacy & Security → Accessibility`
 3. Click "OK" to save
 
 ### Adding New Models
+
+**Ollama:**
 1. Pull the model: `ollama pull <model-name>`
-2. Restart Proofreader or click "Refresh" in model selection
+2. Click "Refresh" in model selection
 3. Select the new model from Settings
+
+**LM Studio:**
+1. Open LM Studio and go to the AI Models tab
+2. Search and download your desired model
+3. Load the model for chatting
+4. The model will appear in Proofreader's model dropdown
+
+**DeepSeek:**
+1. Models are fetched automatically from the API
+2. Available models: `deepseek-chat`, `deepseek-coder`
+3. Select from the dropdown in Settings
 
 ### Custom Keyboard Shortcuts
 Supported formats:
