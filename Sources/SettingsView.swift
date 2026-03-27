@@ -49,9 +49,6 @@ struct SettingsView: View {
                             case .lmstudio:
                                 // LM Studio model is already stored
                                 break
-                            case .deepseek:
-                                // DeepSeek model is already stored
-                                break
                             }
                             previousProvider = newProvider
                             appState.checkOllamaStatus()

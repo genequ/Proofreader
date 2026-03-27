@@ -25,5 +25,4 @@ import Foundation
 enum LLMProviderType: String, CaseIterable, Codable {
     case ollama = "Ollama"
     case lmstudio = "LM Studio"
-    case deepseek = "DeepSeek"
 }
