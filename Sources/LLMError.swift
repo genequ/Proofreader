@@ -30,7 +30,7 @@ enum LLMError: LocalizedError {
             return "Invalid URL: \(url)"
         case .invalidResponse:
             return "Invalid Response"
-        case .unauthorized:
+        case .unauthorized(_):
             return "Unauthorized"
         case .rateLimitExceeded:
             return "Rate Limit Exceeded"
@@ -80,7 +80,7 @@ enum LLMError: LocalizedError {
             return "Check the URL in Settings."
         case .invalidResponse:
             return "Try again or restart the provider."
-        case .unauthorized:
+        case .unauthorized(_):
             return "Check your API key in Settings."
         case .rateLimitExceeded:
             return "Wait a moment and try again, or upgrade your API plan."
