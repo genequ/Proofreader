@@ -72,10 +72,7 @@ struct SettingsView: View {
                             .font(.subheadline)
                             .foregroundColor(.secondary)
                             .frame(width: 80, alignment: .trailing)
-                        TextField("Enter API Key", text: Binding(
-                            get: { appState.deepseekApiKey },
-                            set: { appState.deepseekApiKey = $0 }
-                        ))
+                        TextField("Enter API Key", text: $appState.deepseekApiKey)
                         .textFieldStyle(RoundedBorderTextFieldStyle())
                         .focused($isURLFieldFocused)
                     }

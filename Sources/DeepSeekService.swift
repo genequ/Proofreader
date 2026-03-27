@@ -15,6 +15,9 @@ import Foundation
     }
 
     func updateAPIKey(_ key: String) {
+        #if DEBUG
+        print("[DeepSeekService] updateAPIKey called with key length: \(key.count), prefix: \(String(key.prefix(10)))")
+        #endif
         self.apiKey = key
     }
 
@@ -47,7 +50,15 @@ import Foundation
         }
 
         var request = URLRequest(url: url)
-        request.setValue("Bearer \(apiKey)", forHTTPHeaderField: "Authorization")
+        let authValue = "Bearer \(apiKey)"
+        #if DEBUG
+        print("[DeepSeekService] listModels called")
+        print("[DeepSeekService]   - apiKey length: \(apiKey.count)")
+        print("[DeepSeekService]   - apiKey bytes: \(apiKey.data(using: .utf8)?.map { String(format: "%02x", $0) }.joined() ?? "nil")")
+        print("[DeepSeekService]   - apiKey quoted: \(apiKey.debugDescription)")
+        print("[DeepSeekService]   - Authorization header: \(authValue.prefix(30))...")
+        #endif
+        request.setValue(authValue, forHTTPHeaderField: "Authorization")
 
         do {
             let (data, response) = try await session.data(for: request)

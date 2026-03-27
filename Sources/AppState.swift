@@ -199,6 +199,12 @@ final class AppState: ObservableObject {
     }
 
     func updateDeepSeekAPIKey(_ key: String) {
+        #if DEBUG
+        print("[AppState] updateDeepSeekAPIKey called")
+        print("[AppState]   - key length: \(key.count)")
+        print("[AppState]   - key bytes: \(key.data(using: .utf8)?.map { String(format: "%02x", $0) }.joined() ?? "nil")")
+        print("[AppState]   - key quoted: \(key.debugDescription)")
+        #endif
         deepseekApiKey = key
         Task {
             await deepseekService.updateAPIKey(key)
