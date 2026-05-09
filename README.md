@@ -20,6 +20,7 @@ A sleek menu bar utility that uses AI models to proofread and correct text anywh
 - 🎨 **macOS Native** - Built with SwiftUI following Apple's HIG
 - 🔧 **Customizable** - Change providers, models, prompts, and keyboard shortcuts
 - 📝 **Prompt Templates** - Built-in templates (Academic, Business, Technical, etc.) and custom templates. Switch templates in the result dialog to regenerate instantly.
+- 🔄 **Replace Button** - One-click replacement of original text with corrected version in the source application
 - 📊 **Usage Statistics** - Track corrections, time saved, and session history
 - 🔌 **Connection Health Monitoring** - Auto-reconnect and real-time status indicators
 - 🎓 **Guided Onboarding** - Interactive setup wizard for first-time users
@@ -39,15 +40,15 @@ A sleek menu bar utility that uses AI models to proofread and correct text anywh
 1. **Select text** anywhere on your Mac
 2. **Press `⌘+.`** (or your custom shortcut)
 3. **Wait for processing** - the menu bar icon shows progress
-4. **Review results** - corrected text appears in a dialog
-5. **Copy and close** - clicking "Copy Corrected" automatically copies to clipboard and closes the dialog
+4. **Review results** - corrected text appears in a dialog with diff highlighting
+5. **Replace or Copy** - use "Replace" to update the original text in place, or "Copy Result" to copy to clipboard
 
 ### Dialog Actions
-- **Copy Corrected**: Copies the proofread text to clipboard and closes the dialog
-- **Copy Changes**: Copies only the corrected portions (differences from original)
+- **Replace**: Replaces the original text in the source application with the corrected version (copies to clipboard, switches to source app, and pastes)
+- **Copy Result**: Copies the proofread text to clipboard and closes the dialog
 - **Show Differences**: Toggle to view side-by-side comparison of original vs corrected text with diff highlights
 - **Template Picker**: Switch to a different prompt template and regenerate instantly (one-time, does not change saved setting)
-- **Done**: Close the dialog without copying
+- **Close**: Close the dialog without copying
 
 
 ## Configuration
