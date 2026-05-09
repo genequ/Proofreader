@@ -45,7 +45,7 @@ struct AboutView: View {
             Divider()
             
             // Description
-            Text("A lightweight menu bar utility that uses Ollama's AI models to proofread and correct text anywhere on your Mac with a global keyboard shortcut.")
+            Text("A lightweight menu bar utility that uses AI models (Ollama, LM Studio, DeepSeek) to proofread and correct text anywhere on your Mac with a global keyboard shortcut.")
                 .font(.caption)
                 .foregroundColor(.secondary)
                 .multilineTextAlignment(.center)

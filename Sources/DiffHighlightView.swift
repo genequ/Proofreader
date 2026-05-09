@@ -5,6 +5,11 @@ struct DiffHighlightView: View {
     let correctedText: String
     let highlightIntensity: Double // 0.0 to 1.0
 
+    // Async diff state
+    @State private var highlightedOriginal: AttributedString?
+    @State private var highlightedCorrected: AttributedString?
+    @State private var computedKey: String = ""
+
     // MARK: - Highlight Constants
     private struct HighlightColors {
         static let deletionBackgroundAlpha: Double = 0.25
@@ -15,125 +20,177 @@ struct DiffHighlightView: View {
         static let deletionRed: Color = .red
     }
 
+    private var cacheKey: String {
+        "\(originalText.count)-\(correctedText.count)-\(originalText.prefix(16))-\(correctedText.prefix(16))"
+    }
+
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 16) {
                 if !originalText.isEmpty && !correctedText.isEmpty {
-                    // Show diff comparison
                     VStack(alignment: .leading, spacing: 12) {
                         VStack(alignment: .leading, spacing: 8) {
                             Text("Original:")
                                 .font(.headline)
                                 .foregroundColor(.secondary)
-                            
-                            Text(createAttributedString(for: originalText, isOriginal: true))
-                                .textSelection(.enabled)
-                                .lineSpacing(2) // Better reading experience
-                                .padding(12)
-                                .background(Color(NSColor.controlBackgroundColor))
-                                .cornerRadius(6)
-                                .overlay(
-                                    RoundedRectangle(cornerRadius: 6)
-                                        .stroke(Color(NSColor.separatorColor), lineWidth: 0.5)
-                                )
+
+                            if let highlighted = highlightedOriginal {
+                                Text(highlighted)
+                                    .textSelection(.enabled)
+                                    .lineSpacing(2)
+                            } else {
+                                Text(originalText)
+                                    .textSelection(.enabled)
+                                    .lineSpacing(2)
+                            }
                         }
-                        
+                        .padding(12)
+                        .background(Color(NSColor.controlBackgroundColor))
+                        .cornerRadius(6)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 6)
+                                .stroke(Color(NSColor.separatorColor), lineWidth: 0.5)
+                        )
+
                         VStack(alignment: .leading, spacing: 8) {
                             Text("Corrected:")
                                 .font(.headline)
                                 .foregroundColor(.secondary)
-                            
-                            Text(createAttributedString(for: correctedText, isOriginal: false))
-                                .textSelection(.enabled)
-                                .lineSpacing(2) // Better reading experience
-                                .padding(12)
-                                .background(Color.green.opacity(0.05))
-                                .cornerRadius(6)
-                                .overlay(
-                                    RoundedRectangle(cornerRadius: 6)
-                                        .stroke(Color.green.opacity(0.3), lineWidth: 1)
-                                )
+
+                            if let highlighted = highlightedCorrected {
+                                Text(highlighted)
+                                    .textSelection(.enabled)
+                                    .lineSpacing(2)
+                            } else {
+                                Text(correctedText)
+                                    .textSelection(.enabled)
+                                    .lineSpacing(2)
+                            }
                         }
+                        .padding(12)
+                        .background(Color.green.opacity(0.05))
+                        .cornerRadius(6)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 6)
+                                .stroke(Color.green.opacity(0.3), lineWidth: 1)
+                        )
                     }
                 } else {
-                    // If no original text, only show corrected results
                     Text(correctedText)
                         .textSelection(.enabled)
-                        .lineSpacing(2) // Better reading experience
+                        .lineSpacing(2)
                         .padding(12)
                         .frame(maxWidth: .infinity, alignment: .leading)
                 }
             }
             .padding(16)
         }
+        .onAppear {
+            computeDiffIfNeeded()
+        }
+        .onChange(of: cacheKey) { _, _ in
+            highlightedOriginal = nil
+            highlightedCorrected = nil
+            computeDiffIfNeeded()
+        }
     }
-    
-    private func createAttributedString(for text: String, isOriginal: Bool) -> AttributedString {
+
+    private func computeDiffIfNeeded() {
+        guard cacheKey != computedKey else { return }
+        let key = cacheKey
+        let orig = originalText
+        let corr = correctedText
+        let intensity = highlightIntensity
+
+        Task.detached {
+            let differences = Self.computeDifferences(original: orig, corrected: corr)
+            let origAttr = Self.createAttributedString(for: orig, isOriginal: true, differences: differences, intensity: intensity)
+            let corrAttr = Self.createAttributedString(for: corr, isOriginal: false, differences: differences, intensity: intensity)
+
+            await MainActor.run {
+                guard key == cacheKey else { return }
+                self.highlightedOriginal = origAttr
+                self.highlightedCorrected = corrAttr
+                self.computedKey = key
+            }
+        }
+    }
+
+    // MARK: - Thread-safe static methods for background computation
+
+    private static func computeDifferences(original: String, corrected: String) -> [TextDifference] {
+        let originalChars = Array(original)
+        let correctedChars = Array(corrected)
+        let diff = Self.longestCommonSubsequence(originalChars, correctedChars)
+        var differences: [TextDifference] = []
+        var originalIndex = 0
+        var correctedIndex = 0
+
+        for operation in diff {
+            switch operation {
+            case .equal(let length):
+                originalIndex += length
+                correctedIndex += length
+            case .delete(let length):
+                let range = NSRange(location: originalIndex, length: length)
+                let text = String(originalChars[originalIndex..<originalIndex + length])
+                differences.append(.deletion(range, text))
+                originalIndex += length
+            case .insert(let length):
+                let range = NSRange(location: correctedIndex, length: length)
+                let text = String(correctedChars[correctedIndex..<correctedIndex + length])
+                differences.append(.insertion(range, text))
+                correctedIndex += length
+            }
+        }
+        return filterTrailingWhitespaceDifferences(differences, in: original)
+    }
+
+    private static func createAttributedString(for text: String, isOriginal: Bool, differences: [TextDifference], intensity: Double) -> AttributedString {
         var attributedString = AttributedString(text)
-        
-        // If both original and corrected text exist, perform diff comparison
-        if !originalText.isEmpty && !correctedText.isEmpty {
-            let differences = findDifferences(original: originalText, corrected: correctedText)
-            
-            if isOriginal {
-                // Mark deleted parts in original text (subtle red with strikethrough for accessibility)
-                for diff in differences {
-                    if case .deletion(let range, _) = diff {
-                        applyHighlight(to: &attributedString, in: range, text: text, isDeletion: true)
-                    }
+
+        if isOriginal {
+            for diff in differences {
+                if case .deletion(let range, _) = diff {
+                    applyHighlight(to: &attributedString, in: range, text: text, isDeletion: true, intensity: intensity)
                 }
-            } else {
-                // Mark added parts in corrected text (subtle green with underline for accessibility)
-                for diff in differences {
-                    if case .insertion(let range, _) = diff {
-                        applyHighlight(to: &attributedString, in: range, text: text, isDeletion: false)
-                    }
+            }
+        } else {
+            for diff in differences {
+                if case .insertion(let range, _) = diff {
+                    applyHighlight(to: &attributedString, in: range, text: text, isDeletion: false, intensity: intensity)
                 }
             }
         }
-        
         return attributedString
     }
 
-    // MARK: - Highlight Helpers
-
-    /// Safely applies highlighting to attributed string with proper bounds checking
-    private func applyHighlight(to attributedString: inout AttributedString, in range: NSRange, text: String, isDeletion: Bool) {
+    private static func applyHighlight(to attributedString: inout AttributedString, in range: NSRange, text: String, isDeletion: Bool, intensity: Double) {
         guard let range = Range(range, in: text) else { return }
 
         let startOffset = range.lowerBound.utf16Offset(in: text)
         let endOffset = range.upperBound.utf16Offset(in: text)
 
-        // Validate bounds before accessing indices
         guard startOffset < attributedString.characters.count,
               endOffset <= attributedString.characters.count,
-              startOffset < endOffset else {
-            return
-        }
+              startOffset < endOffset else { return }
 
-        // Get indices safely with bounds checking
         guard startOffset <= attributedString.characters.count - 1,
-              endOffset <= attributedString.characters.count else {
-            return
-        }
+              endOffset <= attributedString.characters.count else { return }
 
         let start = attributedString.index(attributedString.startIndex, offsetByCharacters: startOffset)
         let end = attributedString.index(attributedString.startIndex, offsetByCharacters: endOffset)
 
         guard start < end else { return }
 
-        // Apply highlighting with accessibility features
-        let intensity = highlightIntensity
         if isDeletion {
             attributedString[start..<end].backgroundColor = HighlightColors.deletionRed.opacity(intensity * HighlightColors.deletionBackgroundAlpha)
             attributedString[start..<end].foregroundColor = HighlightColors.deletionRed.opacity(HighlightColors.deletionForegroundAlpha)
-            // Add strikethrough for accessibility
             attributedString[start..<end].strikethroughStyle = .single
         } else {
             attributedString[start..<end].backgroundColor = HighlightColors.insertionGreen.opacity(intensity * HighlightColors.insertionBackgroundAlpha)
             attributedString[start..<end].foregroundColor = HighlightColors.insertionGreen.opacity(HighlightColors.insertionForegroundAlpha)
             attributedString[start..<end].font = .body.weight(.medium)
-            // Add underline for accessibility
             attributedString[start..<end].underlineStyle = .single
         }
     }
@@ -186,12 +243,12 @@ struct DiffHighlightView: View {
         return changes.joined(separator: "\n")
     }
 
-    private func findDifferences(original: String, corrected: String) -> [TextDifference] {
+    private static func findDifferences(original: String, corrected: String) -> [TextDifference] {
         // Use character-level comparison on original text (don't normalize - breaks range mapping)
         let originalChars = Array(original)
         let correctedChars = Array(corrected)
 
-        let diff = longestCommonSubsequence(originalChars, correctedChars)
+        let diff = Self.longestCommonSubsequence(originalChars, correctedChars)
         var differences: [TextDifference] = []
 
         var originalIndex = 0
@@ -221,8 +278,7 @@ struct DiffHighlightView: View {
         return filterTrailingWhitespaceDifferences(differences, in: original)
     }
 
-    /// Remove differences that are only trailing whitespace
-    private func filterTrailingWhitespaceDifferences(_ differences: [TextDifference], in text: String) -> [TextDifference] {
+    private static func filterTrailingWhitespaceDifferences(_ differences: [TextDifference], in text: String) -> [TextDifference] {
         // Find the last non-whitespace character position
         let lastNonWhitespaceIndex = text.lastIndex { !$0.isWhitespace }
 
@@ -245,7 +301,7 @@ struct DiffHighlightView: View {
     }
     
     // Longest Common Subsequence algorithm for diff calculation
-    private func longestCommonSubsequence<T: Equatable>(_ a: [T], _ b: [T]) -> [DiffOperation] {
+    private static func longestCommonSubsequence<T: Equatable>(_ a: [T], _ b: [T]) -> [DiffOperation] {
         let m = a.count
         let n = b.count
         
@@ -329,7 +385,7 @@ struct DiffHighlightView: View {
     }
 
     /// Find the index of the next occurrence of target in array, starting from startIndex and going backward
-    private func findNextMatchIndex<T: Equatable>(in array: [T], target: T, from startIndex: Int) -> Int? {
+    private static func findNextMatchIndex<T: Equatable>(in array: [T], target: T, from startIndex: Int) -> Int? {
         for i in stride(from: startIndex, through: 0, by: -1) {
             if array[i] == target {
                 return i

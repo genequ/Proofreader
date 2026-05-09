@@ -4,6 +4,9 @@ DerivedData/
 *.xcodeproj/
 *.xcworkspace/
 
+# Claude Code local settings
+.claude/
+
 # App bundle
 Proofreader.app/
 

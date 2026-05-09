@@ -127,7 +127,7 @@ struct PromptEditorView: View {
             
             // Actions
             HStack(spacing: 12) {
-                if !isCreatingNew && currentTemplate?.isBuiltIn == false {
+                if !isCreatingNew && currentTemplate?.id != "default" {
                     Button("Delete Template") {
                         if let template = currentTemplate {
                             appState.templateManager.deleteTemplate(template)

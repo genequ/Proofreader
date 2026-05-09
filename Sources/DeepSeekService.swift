@@ -15,9 +15,6 @@ import Foundation
     }
 
     func updateAPIKey(_ key: String) {
-        #if DEBUG
-        print("[DeepSeekService] updateAPIKey called with key length: \(key.count), prefix: \(String(key.prefix(10)))")
-        #endif
         self.apiKey = key
     }
 
@@ -106,7 +103,8 @@ import Foundation
                     let requestBody = DeepSeekChatRequest(
                         model: model,
                         messages: [DeepSeekMessage(role: "user", content: prompt)],
-                        stream: true
+                        stream: true,
+                        thinking: ["type": "disabled"]
                     )
 
                     var request = URLRequest(url: url)
@@ -190,11 +188,13 @@ struct DeepSeekChatRequest: Codable {
     let model: String
     let messages: [DeepSeekMessage]
     let stream: Bool?
+    let thinking: [String: String]?
 
-    init(model: String, messages: [DeepSeekMessage], stream: Bool = false) {
+    init(model: String, messages: [DeepSeekMessage], stream: Bool = false, thinking: [String: String]? = nil) {
         self.model = model
         self.messages = messages
         self.stream = stream
+        self.thinking = thinking
     }
 }
 

@@ -19,6 +19,7 @@ A sleek menu bar utility that uses AI models to proofread and correct text anywh
 - ⚡ **Real-time Processing** - Instant proofreading with streaming output and visual feedback
 - 🎨 **macOS Native** - Built with SwiftUI following Apple's HIG
 - 🔧 **Customizable** - Change providers, models, prompts, and keyboard shortcuts
+- 📝 **Prompt Templates** - Built-in templates (Academic, Business, Technical, etc.) and custom templates. Switch templates in the result dialog to regenerate instantly.
 - 📊 **Usage Statistics** - Track corrections, time saved, and session history
 - 🔌 **Connection Health Monitoring** - Auto-reconnect and real-time status indicators
 - 🎓 **Guided Onboarding** - Interactive setup wizard for first-time users
@@ -43,7 +44,9 @@ A sleek menu bar utility that uses AI models to proofread and correct text anywh
 
 ### Dialog Actions
 - **Copy Corrected**: Copies the proofread text to clipboard and closes the dialog
-- **Show Differences**: Toggle to view side-by-side comparison of original vs corrected text
+- **Copy Changes**: Copies only the corrected portions (differences from original)
+- **Show Differences**: Toggle to view side-by-side comparison of original vs corrected text with diff highlights
+- **Template Picker**: Switch to a different prompt template and regenerate instantly (one-time, does not change saved setting)
 - **Done**: Close the dialog without copying
 
 
@@ -64,12 +67,23 @@ A sleek menu bar utility that uses AI models to proofread and correct text anywh
 You are a text proofreader. Your task is to correct typos and grammar errors in the provided text while strictly preserving the original meaning, formatting, and style.
 ```
 
+### Prompt Templates
+Proofreader includes built-in prompt templates for different writing styles:
+- **Default** - General proofreading for non-native English speakers
+- **Academic Writing** - Formal academic and research writing
+- **Business Communication** - Professional emails and business documents
+- **Casual Writing** - Informal messages and social media
+- **Technical Documentation** - Technical writing and documentation
+- **Creative Writing** - Stories, articles, and creative content
+
+You can also create custom templates. Only the "Default" template cannot be deleted. Switch templates in the result dialog to regenerate with a different template — the selection is one-time and does not persist.
+
 ## Building from Source
 
 ### Prerequisites
 - Xcode 14.0 or later
 - Swift 5.9 or later
-- Ollama running locally
+- An AI provider (Ollama, LM Studio, or DeepSeek API key)
 
 ### Build Steps
 ```bash
@@ -94,7 +108,11 @@ Proofreader/
 │   ├── LMStudioService.swift        # LM Studio API integration
 │   ├── DeepSeekService.swift        # DeepSeek API integration
 │   ├── SettingsView.swift           # Configuration UI
-│   ├── ProofreadingDialog.swift     # Results display
+│   ├── PromptEditorView.swift       # Template management UI
+│   ├── PromptTemplate.swift         # Template model & manager
+│   ├── ProofreadingDialog.swift     # Results display with template picker
+│   ├── DiffHighlightView.swift      # Async diff highlighting (background LCS)
+│   ├── PromptTemplate.swift         # Template management (built-in + custom)
 │   ├── OnboardingView.swift         # First-run setup wizard
 │   ├── ProviderStatusView.swift     # Connection status indicator
 │   ├── StatisticsView.swift         # Usage analytics display
@@ -138,7 +156,7 @@ Grant these in: `System Settings → Privacy & Security → Accessibility`
 ## Customization
 
 ### Modifying the Proofreading Prompt
-1. Click menu bar icon → "Change Prompt"
+1. Click menu bar icon → "Change Template"
 2. Edit the instructions as needed
 3. Click "OK" to save
 

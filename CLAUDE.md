@@ -20,7 +20,7 @@ swift test --filter testName
 
 ## Architecture
 
-This is a macOS menu bar app using SwiftUI. The app uses Ollama's local LLM API for text proofreading.
+This is a macOS menu bar app using SwiftUI. The app uses local (Ollama, LM Studio) or online (DeepSeek) LLM provider for text proofreading.
 
 ### Key Architectural Patterns
 
@@ -46,7 +46,15 @@ This is a macOS menu bar app using SwiftUI. The app uses Ollama's local LLM API 
 
 ### Diff Algorithm
 
-`DiffHighlightView` uses Longest Common Subsequence (LCS) for character-level diffing. The backtracking looks ahead for matches when LCS paths are equal to avoid false positives. Trailing whitespace differences are filtered out post-processing.
+`DiffHighlightView` uses Longest Common Subsequence (LCS) for character-level diffing. The backtracking looks ahead for matches when LCS paths are equal to avoid false positives. Trailing whitespace differences are filtered out post-processing. Diff computation runs on a background thread (`Task.detached`) — plain text renders immediately, highlights apply asynchronously.
+
+### Template System
+
+`TemplateManager` manages built-in and custom prompt templates. The "Default" template (id: `"default"`) cannot be deleted; all other templates can be. The proofreading result dialog includes a template picker for one-time regeneration with a different template — the selection does not persist.
+
+### Provider-Aware Quit
+
+`AppDelegate.applicationWillTerminate` only sends `ollama stop` when Ollama is the active provider. When DeepSeek or LM Studio is selected, the stop command is skipped entirely to avoid inadvertently launching Ollama.
 
 ## Code Signing
 
@@ -57,7 +65,7 @@ The app uses a self-signed "ProofreaderDev" certificate. Run `./setup-cert.sh` i
 - **Platform**: macOS 14.0+ only. Availability checks must match `Package.swift`.
 - **Actor Isolation**: `OllamaService` is an actor - calls must be awaited from `@MainActor` contexts.
 - **Timer Management**: Always invalidate timers before creating new ones to prevent memory leaks.
-- **Memory**: App stops Ollama models on quit via `AppDelegate.applicationWillTerminate`.
+- **Memory**: App stops Ollama models on quit via `AppDelegate.applicationWillTerminate`, but only when Ollama is the selected provider.
 - **Logging**: Use `Log.debug()`/`Log.error()` (defined in `ClipboardManager.swift`) - debug statements are `#if DEBUG` only.
 - **Third-Party Providers**: DeepSeek uses API key authentication stored in UserDefaults. API key is sent via Bearer token in Authorization header.
 

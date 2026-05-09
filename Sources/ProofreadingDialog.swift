@@ -7,6 +7,8 @@ struct ProofreadingDialog: View {
     @State private var showToast: Bool = false
     @State private var toastMessage: String = ""
     @State private var toastIcon: String = "checkmark.circle.fill"
+    @State private var selectedTemplateOverride: String?
+    @State private var hasReceivedResult: Bool = false
     
     // Use computed property to bind to AppState's persistent setting
     private var showDiff: Binding<Bool> {
@@ -37,6 +39,29 @@ struct ProofreadingDialog: View {
                     .disabled(appState.isProcessing)
                 Spacer()
 
+                // Template picker for regeneration
+                HStack(spacing: 6) {
+                    Text("Template:")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                    Picker("", selection: Binding(
+                        get: { selectedTemplateOverride ?? appState.selectedTemplate },
+                        set: { newValue in
+                            let oldValue = selectedTemplateOverride ?? appState.selectedTemplate
+                            selectedTemplateOverride = newValue
+                            if newValue != oldValue {
+                                appState.regenerateWithTemplate(templateId: newValue)
+                            }
+                        }
+                    )) {
+                        ForEach(appState.templateManager.templates) { template in
+                            Text(template.name).tag(template.id)
+                        }
+                    }
+                    .labelsHidden()
+                    .disabled(appState.isProcessing)
+                }
+
                 if appState.isProcessing {
                     HStack(spacing: 6) {
                         ProgressView()
@@ -51,17 +76,115 @@ struct ProofreadingDialog: View {
             .padding(.vertical, 12)
             .background(Color(NSColor.windowBackgroundColor))
             
-            if showDiff.wrappedValue && !appState.originalText.isEmpty && !appState.isProcessing {
-                // Show diff highlighting only when done processing
-                DiffHighlightView(
-                    originalText: appState.originalText,
-                    correctedText: appState.correctedText,
-                    highlightIntensity: appState.highlightIntensity
-                )
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
-                .padding(.top, 8)
+            if showDiff.wrappedValue && !appState.originalText.isEmpty {
+                if appState.isProcessing && hasReceivedResult {
+                    // Regenerating: show original as static, corrected streams in
+                    ScrollView {
+                        VStack(alignment: .leading, spacing: 12) {
+                            VStack(alignment: .leading, spacing: 8) {
+                                Text("Original:")
+                                    .font(.headline)
+                                    .foregroundColor(.secondary)
+                                Text(appState.originalText)
+                                    .textSelection(.enabled)
+                                    .lineSpacing(2)
+                                    .padding(12)
+                                    .frame(maxWidth: .infinity, alignment: .leading)
+                                    .background(Color(NSColor.controlBackgroundColor))
+                                    .cornerRadius(6)
+                                    .overlay(
+                                        RoundedRectangle(cornerRadius: 6)
+                                            .stroke(Color(NSColor.separatorColor), lineWidth: 0.5)
+                                    )
+                            }
+
+                            VStack(alignment: .leading, spacing: 8) {
+                                HStack(spacing: 6) {
+                                    Text("Corrected:")
+                                        .font(.headline)
+                                        .foregroundColor(.secondary)
+                                    ProgressView()
+                                        .scaleEffect(0.6)
+                                }
+                                TextEditor(text: .constant(appState.correctedText))
+                                    .font(.system(.body, design: .default))
+                                    .lineSpacing(2)
+                                    .padding(4)
+                                    .frame(minHeight: 150)
+                            }
+                            .padding(12)
+                            .background(Color.green.opacity(0.05))
+                            .cornerRadius(6)
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 6)
+                                    .stroke(Color.green.opacity(0.3), lineWidth: 1)
+                            )
+                        }
+                        .padding(16)
+                    }
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .padding(.top, 8)
+                } else if !appState.isProcessing && !appState.correctedText.isEmpty {
+                    // Done: show full diff highlighting
+                    DiffHighlightView(
+                        originalText: appState.originalText,
+                        correctedText: appState.correctedText,
+                        highlightIntensity: appState.highlightIntensity
+                    )
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .padding(.top, 8)
+                } else {
+                    // First-time streaming: show original immediately, corrected streams in
+                    ScrollView {
+                        VStack(alignment: .leading, spacing: 12) {
+                            VStack(alignment: .leading, spacing: 8) {
+                                Text("Original:")
+                                    .font(.headline)
+                                    .foregroundColor(.secondary)
+                                Text(appState.originalText)
+                                    .textSelection(.enabled)
+                                    .lineSpacing(2)
+                                    .padding(12)
+                                    .frame(maxWidth: .infinity, alignment: .leading)
+                                    .background(Color(NSColor.controlBackgroundColor))
+                                    .cornerRadius(6)
+                                    .overlay(
+                                        RoundedRectangle(cornerRadius: 6)
+                                            .stroke(Color(NSColor.separatorColor), lineWidth: 0.5)
+                                    )
+                            }
+
+                            VStack(alignment: .leading, spacing: 8) {
+                                HStack(spacing: 6) {
+                                    Text("Corrected:")
+                                        .font(.headline)
+                                        .foregroundColor(.secondary)
+                                    if appState.isProcessing {
+                                        ProgressView()
+                                            .scaleEffect(0.6)
+                                    }
+                                }
+                                TextEditor(text: .constant(appState.correctedText))
+                                    .font(.system(.body, design: .default))
+                                    .lineSpacing(2)
+                                    .padding(4)
+                                    .frame(minHeight: 150)
+                            }
+                            .padding(12)
+                            .background(Color.green.opacity(0.05))
+                            .cornerRadius(6)
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 6)
+                                    .stroke(Color.green.opacity(0.3), lineWidth: 1)
+                            )
+                        }
+                        .padding(16)
+                    }
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .padding(.top, 8)
+                }
             } else {
-                // Plain text editor view - visible during streaming
+                // No original text or diff disabled: plain text editor
                 ScrollView {
                     TextEditor(text: .constant(appState.correctedText))
                         .font(.system(.body, design: .default))
@@ -80,24 +203,25 @@ struct ProofreadingDialog: View {
             
             // Action buttons
             HStack(spacing: 12) {
+                if !appState.isProcessing && !appState.originalText.isEmpty && !appState.correctedText.isEmpty {
+                    Button(action: {
+                        replaceInSource()
+                    }) {
+                        Label("Replace", systemImage: "arrow.uturn.backward")
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .help("Replace original text with corrected version in the source app")
+                }
+
                 Button(action: {
                     copyToClipboard(appState.correctedText)
                     showToastNotification("Copied to clipboard", icon: "checkmark.circle.fill")
+                    dismiss()
                 }) {
-                    Label("Copy Corrected", systemImage: "doc.on.clipboard")
+                    Label("Copy Result", systemImage: "doc.on.clipboard")
                 }
-                .buttonStyle(.borderedProminent)
+                .buttonStyle(.bordered)
                 .disabled(appState.isProcessing || appState.correctedText.isEmpty)
-
-                if !appState.isProcessing && !appState.originalText.isEmpty && !appState.correctedText.isEmpty {
-                    Button(action: {
-                        copyChangesOnly()
-                    }) {
-                        Label("Copy Changes", systemImage: "doc.on.doc")
-                    }
-                    .buttonStyle(.bordered)
-                    .help("Copy only the corrected portions")
-                }
 
                 Spacer()
 
@@ -113,8 +237,16 @@ struct ProofreadingDialog: View {
         }
         .frame(width: 800, height: 500)
         .toast(isShowing: $showToast, message: toastMessage, icon: toastIcon)
+        .onChange(of: appState.isProcessing) { _, newValue in
+            if !newValue && !appState.correctedText.isEmpty {
+                hasReceivedResult = true
+            }
+        }
         .onAppear {
             setupKeyMonitor()
+            if !appState.correctedText.isEmpty {
+                hasReceivedResult = true
+            }
         }
         .onDisappear {
             removeKeyMonitor()
@@ -221,134 +353,29 @@ struct ProofreadingDialog: View {
         pasteboard.clearContents()
         pasteboard.setString(text, forType: .string)
     }
-    
-    private func copyChangesOnly() {
-        // Extract only the changed portions
-        let changes = extractChangesFromDiff()
-        if !changes.isEmpty {
-            copyToClipboard(changes)
-            showToastNotification("Changes copied to clipboard", icon: "doc.on.doc.fill")
+
+    private func replaceInSource() {
+        // Copy corrected text to clipboard
+        copyToClipboard(appState.correctedText)
+
+        // Activate the source app and paste
+        if let bundleId = appState.sourceAppBundle,
+           let appUrl = NSRunningApplication.runningApplications(withBundleIdentifier: bundleId).first {
+            appUrl.activate(options: [])
+
+            // Wait briefly for app activation, then paste
+            Task {
+                try? await Task.sleep(nanoseconds: 150_000_000) // 150ms
+                _ = ClipboardManager.shared.simulatePaste()
+                showToastNotification("Replaced in source app", icon: "checkmark.circle.fill")
+                dismiss()
+            }
         } else {
-            showToastNotification("No changes found", icon: "info.circle.fill")
+            // No source app tracked, just copy and notify
+            showToastNotification("Copied to clipboard", icon: "doc.on.clipboard")
         }
     }
 
-    private func extractChangesFromDiff() -> String {
-        // If no original text, return corrected
-        guard !appState.originalText.isEmpty else {
-            return appState.correctedText
-        }
-
-        // Calculate differences
-        let differences = findDifferences(original: appState.originalText, corrected: appState.correctedText)
-        return DiffHighlightView.extractChanges(from: differences, correctedText: appState.correctedText, originalText: appState.originalText)
-    }
-
-    private func findDifferences(original: String, corrected: String) -> [TextDifference] {
-        // Use the same LCS algorithm from DiffHighlightView
-        let originalChars = Array(original)
-        let correctedChars = Array(corrected)
-
-        let diff = longestCommonSubsequence(originalChars, correctedChars)
-        var differences: [TextDifference] = []
-
-        var originalIndex = 0
-        var correctedIndex = 0
-
-        for operation in diff {
-            switch operation {
-            case .equal(let length):
-                originalIndex += length
-                correctedIndex += length
-
-            case .delete(let length):
-                let range = NSRange(location: originalIndex, length: length)
-                let text = String(originalChars[originalIndex..<originalIndex + length])
-                differences.append(.deletion(range, text))
-                originalIndex += length
-
-            case .insert(let length):
-                let range = NSRange(location: correctedIndex, length: length)
-                let text = String(correctedChars[correctedIndex..<correctedIndex + length])
-                differences.append(.insertion(range, text))
-                correctedIndex += length
-            }
-        }
-
-        return differences
-    }
-
-    // Longest Common Subsequence algorithm (shared with DiffHighlightView)
-    private func longestCommonSubsequence<T: Equatable>(_ a: [T], _ b: [T]) -> [DiffOperation] {
-        let m = a.count
-        let n = b.count
-
-        // Create LCS table
-        var lcs = Array(repeating: Array(repeating: 0, count: n + 1), count: m + 1)
-
-        for i in 1...m {
-            for j in 1...n {
-                if a[i-1] == b[j-1] {
-                    lcs[i][j] = lcs[i-1][j-1] + 1
-                } else {
-                    lcs[i][j] = max(lcs[i-1][j], lcs[i][j-1])
-                }
-            }
-        }
-
-        // Backtrack to build diff operation sequence
-        var operations: [DiffOperation] = []
-        var i = m, j = n
-
-        while i > 0 && j > 0 {
-            if a[i-1] == b[j-1] {
-                var equalCount = 1
-                i -= 1
-                j -= 1
-
-                while i > 0 && j > 0 && a[i-1] == b[j-1] {
-                    equalCount += 1
-                    i -= 1
-                    j -= 1
-                }
-
-                operations.append(.equal(equalCount))
-            } else if lcs[i-1][j] > lcs[i][j-1] {
-                var deleteCount = 1
-                i -= 1
-
-                while i > 0 && (j == 0 || lcs[i-1][j] >= lcs[i][j-1]) {
-                    deleteCount += 1
-                    i -= 1
-                }
-
-                operations.append(.delete(deleteCount))
-            } else {
-                var insertCount = 1
-                j -= 1
-
-                while j > 0 && (i == 0 || lcs[i][j-1] > lcs[i-1][j]) {
-                    insertCount += 1
-                    j -= 1
-                }
-
-                operations.append(.insert(insertCount))
-            }
-        }
-
-        while i > 0 {
-            operations.append(.delete(1))
-            i -= 1
-        }
-
-        while j > 0 {
-            operations.append(.insert(1))
-            j -= 1
-        }
-
-        return operations.reversed()
-    }
-    
     private func showToastNotification(_ message: String, icon: String) {
         toastMessage = message
         toastIcon = icon

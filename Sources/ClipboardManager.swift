@@ -1,5 +1,6 @@
 import AppKit
 import Carbon
+import Foundation
 
 class ClipboardManager {
     static let shared = ClipboardManager()
@@ -9,15 +10,12 @@ class ClipboardManager {
     /// Get the currently selected text by simulating Command+C
     /// Returns the selected text, or nil if nothing was selected
     func getSelectedText() -> String? {
-        Log.debug("[ClipboardManager] Attempting to get selected text...")
-
         let pasteboard = NSPasteboard.general
         let previousContents = pasteboard.string(forType: .string)
         let changeCount = pasteboard.changeCount
 
         // Simulate Command+C to copy selected text
         guard simulateCopy() else {
-            Log.error("[ClipboardManager] Failed to simulate copy")
             return nil
         }
 
@@ -26,12 +24,6 @@ class ClipboardManager {
 
         // Poll for clipboard change with timeout
         let selectedText = waitForClipboardChange(previousChangeCount: changeCount, timeout: 0.2)
-
-        if let text = selectedText {
-            Log.debug("[ClipboardManager] Selected text: \(text.prefix(50))...")
-        } else {
-            Log.debug("[ClipboardManager] No text selected")
-        }
 
         // Restore previous clipboard contents if we successfully copied something different
         if let previousContents = previousContents,
@@ -49,6 +41,27 @@ class ClipboardManager {
         let pasteboard = NSPasteboard.general
         pasteboard.clearContents()
         pasteboard.setString(text, forType: .string)
+    }
+
+    /// Simulate Command+V key press (paste)
+    func simulatePaste() -> Bool {
+        guard let source = CGEventSource(stateID: .hidSystemState) else {
+            return false
+        }
+
+        // V key code is 0x09
+        guard let keyDown = CGEvent(keyboardEventSource: source, virtualKey: 0x09, keyDown: true),
+              let keyUp = CGEvent(keyboardEventSource: source, virtualKey: 0x09, keyDown: false) else {
+            return false
+        }
+
+        keyDown.flags = .maskCommand
+        keyUp.flags = .maskCommand
+
+        keyDown.post(tap: .cgSessionEventTap)
+        keyUp.post(tap: .cgSessionEventTap)
+
+        return true
     }
 
     // MARK: - Private Helpers
@@ -89,19 +102,5 @@ class ClipboardManager {
 
         // Timeout - check final state
         return pasteboard.string(forType: .string)
-    }
-}
-
-// MARK: - Logging
-
-enum Log {
-    static func debug(_ message: String) {
-        #if DEBUG
-        print(message)
-        #endif
-    }
-
-    static func error(_ message: String) {
-        print("[ERROR] \(message)")
     }
 }

@@ -135,9 +135,9 @@ class TemplateManager: ObservableObject {
         }
     }
     
-    /// Delete a custom template
+    /// Delete a template (cannot delete Default)
     func deleteTemplate(_ template: PromptTemplate) {
-        guard !template.isBuiltIn else { return }
+        guard template.id != "default" else { return }
         templates.removeAll { $0.id == template.id }
         saveCustomTemplates()
     }
