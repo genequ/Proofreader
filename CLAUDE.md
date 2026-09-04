@@ -4,11 +4,13 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Development Commands
 
+**Always build with `./build-app.sh`** — never call `swift build` directly when producing a build. `swift build` skips code signing, the `.app` bundle assembly, and entitlements, producing a binary that does not match what ships. Use it only for a quick compile check, not as the build step.
+
 ```bash
-# Build the app (creates Proofreader.app with code signing)
+# Build the app — REQUIRED for any build (creates Proofreader.app with code signing + entitlements)
 ./build-app.sh
 
-# Debug build (faster, no signing)
+# Quick compile/type check only (faster, no signing, NOT a real build)
 swift build
 
 # Run tests
@@ -20,13 +22,13 @@ swift test --filter testName
 
 ## Architecture
 
-This is a macOS menu bar app using SwiftUI. The app uses local (Ollama, LM Studio) or online (DeepSeek) LLM provider for text proofreading.
+This is a macOS menu bar app using SwiftUI. The app uses a local (Ollama) or online (DeepSeek, OpenRouter) LLM provider for text proofreading.
 
 ### Key Architectural Patterns
 
 **State Management**: Centralized in `AppState.swift` using `@MainActor` and `@AppStorage` for persistence. All views observe `AppState` as an `@EnvironmentObject`.
 
-**Window Management**: `WindowManager` singleton manages non-Modal windows (settings, dialogs, onboarding) via string IDs. Windows are reused if already open.
+**Window Management**: `WindowManager` singleton manages non-Modal windows (settings, dialogs, onboarding) via string IDs. Windows are reused if already open. Window sizes come from `WindowMetrics` — the single source of truth shared by `AppState.showX(...)` (NSWindow contentRect) and each view's `.frame(...)`; a mismatch clips content under the title bar / at the bottom. `Tests/WindowAndUITests.swift` guards this.
 
 **Global Shortcuts**: `ShortcutManager` uses Carbon HotKeys API (`RegisterEventHotKey`) for zero-latency global keyboard shortcuts. This requires Accessibility permissions.
 
@@ -35,7 +37,7 @@ This is a macOS menu bar app using SwiftUI. The app uses local (Ollama, LM Studi
 ### Service Layer
 
 - `OllamaService`: Actor-based HTTP client with `listModels()`, `generate()`, `generateStream()`, and health checks. Uses `OllamaService.findOllamaPath()` for cross-platform binary detection.
-- `LMStudioService`: Actor-based HTTP client for LM Studio's OpenAI-compatible API. Methods: `checkInstallation()`, `listModels()`, `generateStream()`, `updateBaseURL()`. Connects to `http://127.0.0.1:1234/v1` by default.
+- `OpenRouterService`: Actor-based HTTP client for the OpenRouter API. Fixed base URL `https://openrouter.ai/api/v1`, Bearer-key auth, xAI Grok (`x-ai/`) models only. Sends the lowest reasoning effort the model supports (`none` → `low` → omitted), falling through on reasoning-related HTTP 400s; 15s timeout with a stream progress watchdog. Methods: `checkInstallation()`, `listModels()`, `generateStream()`, `updateAPIKey()`.
 - `DeepSeekService`: Actor-based HTTP client for DeepSeek API. Uses API key authentication. Compatible with OpenAI API format. Methods: `checkInstallation()`, `listModels()`, `generateStream()`, `updateAPIKey()`.
 - `ClipboardManager`: Simulates `Cmd+C` via `CGEvent` to capture selected text, then polls clipboard for changes.
 - `StatisticsManager`: Tracks usage with debounced saves (2s delay) and `forceSave()` on quit.
@@ -54,7 +56,7 @@ This is a macOS menu bar app using SwiftUI. The app uses local (Ollama, LM Studi
 
 ### Provider-Aware Quit
 
-`AppDelegate.applicationWillTerminate` only sends `ollama stop` when Ollama is the active provider. When DeepSeek or LM Studio is selected, the stop command is skipped entirely to avoid inadvertently launching Ollama.
+`AppDelegate.applicationWillTerminate` only sends `ollama stop` when Ollama is the active provider. When DeepSeek or OpenRouter is selected, the stop command is skipped entirely to avoid inadvertently launching Ollama.
 
 ## Code Signing
 
@@ -76,3 +78,4 @@ The app uses a self-signed "ProofreaderDev" certificate. Run `./setup-cert.sh` i
 - Don't define duplicate enums across files (e.g., `DiffOperation`, `TextDifference`) - keep single source of truth
 - Don't use `connectionStatus` - it's deprecated; use `ollamaStatus` instead
 - Don't create new `OllamaService` instances - share the one in `AppState`
+- Don't build with `swift build` as the build step — always use `./build-app.sh` (signing + bundle + entitlements). `swift build` is only a quick compile check.

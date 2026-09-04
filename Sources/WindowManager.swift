@@ -33,8 +33,10 @@ final class WindowManager: NSObject {
         
         windows[id] = window
         window.makeKeyAndOrderFront(nil)
-        window.makeMain()
-        NSApp.activate(ignoringOtherApps: true)
+        // No `makeMain()` — this is an .accessory app; forcing main-window
+        // status causes focus quirks on macOS 26/27. `activate()` (no-arg,
+        // macOS 14+) replaces the deprecated activate(ignoringOtherApps:).
+        NSApp.activate()
         window.orderFrontRegardless()
     }
     

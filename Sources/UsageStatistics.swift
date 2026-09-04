@@ -92,6 +92,11 @@ struct ProofreadingSession: Codable, Identifiable {
 /// Manages usage statistics persistence and tracking
 @MainActor
 class StatisticsManager: ObservableObject {
+    /// Single shared instance so the pending (debounced) statistics are the
+    /// same object everywhere — AppDelegate's willTerminate flush must see
+    /// the live state, not a fresh copy reloaded from disk.
+    static let shared = StatisticsManager()
+
     @Published var statistics: UsageStatistics
 
     private let statisticsKey = "usageStatistics"
@@ -99,7 +104,7 @@ class StatisticsManager: ObservableObject {
     private var saveTask: Task<Void, Never>?
     private let saveDebounceDelay: TimeInterval = 2.0  // Debounce saves by 2 seconds
 
-    init() {
+    private init() {
         // Load existing statistics
         if let data = userDefaults.data(forKey: statisticsKey),
            let stats = try? JSONDecoder().decode(UsageStatistics.self, from: data) {
@@ -214,6 +219,13 @@ class StatisticsManager: ObservableObject {
     private func longestCommonSubsequence<T: Equatable>(_ a: [T], _ b: [T]) -> [LCSOperation] {
         let m = a.count
         let n = b.count
+
+        // Empty inputs: `1...0` traps at runtime ("Range requires
+        // lowerBound <= upperBound"). Happens when the model returns empty
+        // text (e.g. reasoning-only stream) or the selection was empty.
+        if m == 0 && n == 0 { return [] }
+        if m == 0 { return [.insert(n)] }
+        if n == 0 { return [.delete(m)] }
 
         var lcs = Array(repeating: Array(repeating: 0, count: n + 1), count: m + 1)
 

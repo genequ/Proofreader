@@ -207,7 +207,7 @@ struct PromptEditorView: View {
             appState.selectedTemplate = selectedTemplateId
         }
     }
-    
+
     private func setupKeyMonitor() {
         monitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { event in
             if event.keyCode == 53 { // ESC key
@@ -217,7 +217,7 @@ struct PromptEditorView: View {
             return event
         }
     }
-    
+
     private func removeKeyMonitor() {
         if let monitor = monitor {
             NSEvent.removeMonitor(monitor)

@@ -45,14 +45,17 @@ struct AboutView: View {
             Divider()
             
             // Description
-            Text("A lightweight menu bar utility that uses AI models (Ollama, LM Studio, DeepSeek) to proofread and correct text anywhere on your Mac with a global keyboard shortcut.")
+            Text("A lightweight menu bar utility that uses AI models (Ollama, DeepSeek, OpenRouter) to proofread and correct text anywhere on your Mac with a global keyboard shortcut.")
                 .font(.caption)
                 .foregroundColor(.secondary)
                 .multilineTextAlignment(.center)
                 .fixedSize(horizontal: false, vertical: true)
                 .padding(.horizontal, 8)
             
-            // Buttons
+            // Pin actions to the window bottom; extra space collects above
+            Spacer(minLength: 16)
+
+            // Buttons — secondary leading, default (Return) trailing per HIG
             HStack(spacing: 12) {
                 Button("GitHub") {
                     if let url = URL(string: "https://github.com/genequ/Proofreader") {
@@ -60,7 +63,9 @@ struct AboutView: View {
                     }
                 }
                 .buttonStyle(.bordered)
-                
+
+                Spacer()
+
                 Button("Done") {
                     dismiss()
                 }
@@ -69,7 +74,7 @@ struct AboutView: View {
             }
         }
         .padding(20)
-        .frame(width: 320, height: 300)
+        .frame(width: WindowMetrics.about.width, height: WindowMetrics.about.height)
         .onAppear {
             setupKeyMonitor()
         }

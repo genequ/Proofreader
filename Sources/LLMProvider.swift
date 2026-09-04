@@ -24,6 +24,6 @@ import Foundation
 /// Available LLM provider types
 enum LLMProviderType: String, CaseIterable, Codable {
     case ollama = "Ollama"
-    case lmstudio = "LM Studio"
     case deepseek = "DeepSeek"
+    case openrouter = "OpenRouter"
 }

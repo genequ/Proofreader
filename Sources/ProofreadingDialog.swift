@@ -49,6 +49,7 @@ struct ProofreadingDialog: View {
                         set: { newValue in
                             let oldValue = selectedTemplateOverride ?? appState.selectedTemplate
                             selectedTemplateOverride = newValue
+                            appState.selectedTemplate = newValue  // Persist the selection
                             if newValue != oldValue {
                                 appState.regenerateWithTemplate(templateId: newValue)
                             }
@@ -72,8 +73,8 @@ struct ProofreadingDialog: View {
                     }
                 }
             }
-            .padding(.horizontal, 16)
-            .padding(.vertical, 12)
+            .padding(.horizontal, 20)
+            .padding(.vertical, 16)
             .background(Color(NSColor.windowBackgroundColor))
             
             if showDiff.wrappedValue && !appState.originalText.isEmpty {
@@ -111,6 +112,7 @@ struct ProofreadingDialog: View {
                                     .lineSpacing(2)
                                     .padding(4)
                                     .frame(minHeight: 150)
+                                    .disabled(true)
                             }
                             .padding(12)
                             .background(Color.green.opacity(0.05))
@@ -120,7 +122,7 @@ struct ProofreadingDialog: View {
                                     .stroke(Color.green.opacity(0.3), lineWidth: 1)
                             )
                         }
-                        .padding(16)
+                        .padding(20)
                     }
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
                     .padding(.top, 8)
@@ -169,6 +171,7 @@ struct ProofreadingDialog: View {
                                     .lineSpacing(2)
                                     .padding(4)
                                     .frame(minHeight: 150)
+                                    .disabled(true)
                             }
                             .padding(12)
                             .background(Color.green.opacity(0.05))
@@ -178,7 +181,7 @@ struct ProofreadingDialog: View {
                                     .stroke(Color.green.opacity(0.3), lineWidth: 1)
                             )
                         }
-                        .padding(16)
+                        .padding(20)
                     }
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
                     .padding(.top, 8)
@@ -189,6 +192,7 @@ struct ProofreadingDialog: View {
                     TextEditor(text: .constant(appState.correctedText))
                         .font(.system(.body, design: .default))
                         .frame(minHeight: 300)
+                        .disabled(true)
                 }
                 .background(Color(NSColor.textBackgroundColor))
                 .overlay(
@@ -196,22 +200,32 @@ struct ProofreadingDialog: View {
                         .stroke(Color(NSColor.separatorColor), lineWidth: 0.5)
                 )
                 .cornerRadius(6)
-                .padding(.horizontal, 16)
+                .padding(.horizontal, 20)
                 .padding(.top, 8)
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
             
-            // Action buttons
+            // Action buttons — macOS HIG layout: secondary actions leading,
+            // Cancel left of the default, default (Return) rightmost with
+            // the prominent style.
             HStack(spacing: 12) {
                 if !appState.isProcessing && !appState.originalText.isEmpty && !appState.correctedText.isEmpty {
                     Button(action: {
                         replaceInSource()
                     }) {
-                        Label("Replace", systemImage: "arrow.uturn.backward")
+                        Label("Replace", systemImage: "text.insert")
                     }
-                    .buttonStyle(.borderedProminent)
+                    .buttonStyle(.bordered)
                     .help("Replace original text with corrected version in the source app")
                 }
+
+                Spacer()
+
+                Button("Close") {
+                    dismiss()
+                }
+                .buttonStyle(.bordered)
+                .keyboardShortcut(.cancelAction)
 
                 Button(action: {
                     copyToClipboard(appState.correctedText)
@@ -220,22 +234,15 @@ struct ProofreadingDialog: View {
                 }) {
                     Label("Copy Result", systemImage: "doc.on.clipboard")
                 }
-                .buttonStyle(.bordered)
-                .disabled(appState.isProcessing || appState.correctedText.isEmpty)
-
-                Spacer()
-
-                Button("Close") {
-                    dismiss()
-                }
-                .buttonStyle(.bordered)
+                .buttonStyle(.borderedProminent)
                 .keyboardShortcut(.return)
+                .disabled(appState.isProcessing || appState.correctedText.isEmpty)
             }
-            .padding(.horizontal, 16)
-            .padding(.vertical, 16)
+            .padding(.horizontal, 20)
+            .padding(.vertical, 20)
             .background(Color(NSColor.windowBackgroundColor))
         }
-        .frame(width: 800, height: 500)
+        .frame(width: WindowMetrics.proofreadingDialog.width, height: WindowMetrics.proofreadingDialog.height)
         .toast(isShowing: $showToast, message: toastMessage, icon: toastIcon)
         .onChange(of: appState.isProcessing) { _, newValue in
             if !newValue && !appState.correctedText.isEmpty {
@@ -278,7 +285,7 @@ struct ProofreadingDialog: View {
             
             Spacer()
         }
-        .padding(.horizontal, 16)
+        .padding(.horizontal, 20)
         .padding(.vertical, 8)
         .background(Color(NSColor.controlBackgroundColor))
     }
@@ -315,7 +322,7 @@ struct ProofreadingDialog: View {
         .padding(12)
         .background(Color.orange.opacity(0.1))
         .cornerRadius(8)
-        .padding(.horizontal, 16)
+        .padding(.horizontal, 20)
         .padding(.bottom, 8)
     }
     
@@ -340,14 +347,14 @@ struct ProofreadingDialog: View {
             return event
         }
     }
-    
+
     private func removeKeyMonitor() {
         if let monitor = monitor {
             NSEvent.removeMonitor(monitor)
             self.monitor = nil
         }
     }
-    
+
     private func copyToClipboard(_ text: String) {
         let pasteboard = NSPasteboard.general
         pasteboard.clearContents()
@@ -361,7 +368,7 @@ struct ProofreadingDialog: View {
         // Activate the source app and paste
         if let bundleId = appState.sourceAppBundle,
            let appUrl = NSRunningApplication.runningApplications(withBundleIdentifier: bundleId).first {
-            appUrl.activate(options: [])
+            appUrl.activate()
 
             // Wait briefly for app activation, then paste
             Task {

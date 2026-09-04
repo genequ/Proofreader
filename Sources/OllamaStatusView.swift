@@ -190,17 +190,6 @@ struct OllamaStatusView: View {
                 copyToClipboard("brew install ollama")
             }
 
-        case .lmstudio:
-            alert.messageText = "Install LM Studio"
-            alert.informativeText = "Download LM Studio from:\n\nhttps://lmstudio.ai/\n\nAfter installation, start the app and enable the API server in settings."
-            alert.alertStyle = .informational
-            alert.addButton(withTitle: "Open Website")
-            alert.addButton(withTitle: "OK")
-            let response = alert.runModal()
-            if response == .alertFirstButtonReturn, let url = URL(string: "https://lmstudio.ai/") {
-                NSWorkspace.shared.open(url)
-            }
-
         case .deepseek:
             alert.messageText = "DeepSeek API Key Required"
             alert.informativeText = "To use DeepSeek, you need an API key:\n\n1. Get your key from: https://platform.deepseek.com/\n2. Enter the key in Settings\n3. Select a model from the dropdown"
@@ -209,6 +198,17 @@ struct OllamaStatusView: View {
             alert.addButton(withTitle: "OK")
             let response = alert.runModal()
             if response == .alertFirstButtonReturn, let url = URL(string: "https://platform.deepseek.com/") {
+                NSWorkspace.shared.open(url)
+            }
+
+        case .openrouter:
+            alert.messageText = "OpenRouter API Key Required"
+            alert.informativeText = "To use OpenRouter, you need an API key:\n\n1. Get your key from: https://openrouter.ai/keys\n2. Enter the key in Settings\n3. Select a model from the dropdown"
+            alert.alertStyle = .informational
+            alert.addButton(withTitle: "Open Website")
+            alert.addButton(withTitle: "OK")
+            let response = alert.runModal()
+            if response == .alertFirstButtonReturn, let url = URL(string: "https://openrouter.ai/keys") {
                 NSWorkspace.shared.open(url)
             }
         }
@@ -229,16 +229,20 @@ struct OllamaStatusView: View {
                 copyToClipboard("ollama serve")
             }
 
-        case .lmstudio:
-            alert.messageText = "Enable LM Studio API Server"
-            alert.informativeText = "1. Open LM Studio\n2. Go to Settings (gear icon)\n3. Enable \"Enable Server\"\n4. Use default port 1234"
-            alert.alertStyle = .informational
-            alert.addButton(withTitle: "OK")
-            alert.runModal()
-
         case .deepseek:
             alert.messageText = "Check API Key"
             alert.informativeText = "Make sure your API key is valid and entered correctly in Settings.\n\nGet your key from: https://platform.deepseek.com/"
+            alert.alertStyle = .informational
+            alert.addButton(withTitle: "Open Settings")
+            alert.addButton(withTitle: "OK")
+            let response = alert.runModal()
+            if response == .alertFirstButtonReturn {
+                onOpenSettings?()
+            }
+
+        case .openrouter:
+            alert.messageText = "Check API Key"
+            alert.informativeText = "Make sure your API key is valid and entered correctly in Settings.\n\nGet your key from: https://openrouter.ai/keys"
             alert.alertStyle = .informational
             alert.addButton(withTitle: "Open Settings")
             alert.addButton(withTitle: "OK")
@@ -264,16 +268,20 @@ struct OllamaStatusView: View {
                 copyToClipboard("ollama pull gemma2:2b")
             }
 
-        case .lmstudio:
-            alert.messageText = "Load a Model in LM Studio"
-            alert.informativeText = "1. Open LM Studio\n2. Go to the AI Models tab\n3. Search and download a model\n4. Load the model for chatting\n\nThe model will be available in Proofreader once loaded."
-            alert.alertStyle = .informational
-            alert.addButton(withTitle: "OK")
-            alert.runModal()
-
         case .deepseek:
             alert.messageText = "Select a Model"
             alert.informativeText = "DeepSeek models should appear in the Model dropdown in Settings.\n\nAvailable models:\n• deepseek-chat\n• deepseek-coder\n\nIf no models appear, check your API key."
+            alert.alertStyle = .informational
+            alert.addButton(withTitle: "Open Settings")
+            alert.addButton(withTitle: "OK")
+            let response = alert.runModal()
+            if response == .alertFirstButtonReturn {
+                onOpenSettings?()
+            }
+
+        case .openrouter:
+            alert.messageText = "Select a Model"
+            alert.informativeText = "OpenRouter is configured to show only x-ai (Grok) models in the Model dropdown once your API key is set.\n\nExamples:\n• x-ai/grok-4\n• x-ai/grok-4-fast\n• x-ai/grok-3\n\nIf no models appear, check your API key."
             alert.alertStyle = .informational
             alert.addButton(withTitle: "Open Settings")
             alert.addButton(withTitle: "OK")

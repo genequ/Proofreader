@@ -25,7 +25,7 @@ struct SettingsView: View {
                 },
                 provider: appState.selectedProvider
             )
-            
+
             Divider()
 
             // Provider Selection Section
@@ -51,12 +51,20 @@ struct SettingsView: View {
                             case .ollama:
                                 // Ollama model is already stored
                                 break
-                            case .lmstudio:
-                                // LM Studio model is already stored
-                                break
                             case .deepseek:
                                 // DeepSeek model is already stored
                                 break
+                            case .openrouter:
+                                // OpenRouter model is already stored
+                                break
+                            }
+                            // Update originalAPIKey when switching providers
+                            if newProvider == .deepseek {
+                                originalAPIKey = appState.deepseekApiKey
+                            } else if newProvider == .openrouter {
+                                originalAPIKey = appState.openrouterApiKey
+                            } else {
+                                originalAPIKey = ""
                             }
                             previousProvider = newProvider
                             appState.checkOllamaStatus()
@@ -81,17 +89,32 @@ struct SettingsView: View {
 
             // Settings Section
             VStack(spacing: 14) {
-                // Show URL field for Ollama and LM Studio, API Key for DeepSeek
-                if appState.selectedProvider == .deepseek {
+                // Show URL field for Ollama, API Key for DeepSeek and OpenRouter
+                if appState.selectedProvider == .deepseek || appState.selectedProvider == .openrouter {
+                    // API Key field
                     HStack(alignment: .center) {
                         Text("API Key:")
                             .font(.subheadline)
                             .foregroundColor(.secondary)
                             .frame(width: 80, alignment: .trailing)
-                        TextField("Enter API Key", text: $appState.deepseekApiKey)
+                        // Masked input: API keys must never render in plaintext
+                        SecureField("Enter API Key", text: Binding(
+                            get: { currentAPIKey },
+                            set: { newValue in
+                                switch appState.selectedProvider {
+                                case .deepseek:
+                                    appState.deepseekApiKey = newValue
+                                case .openrouter:
+                                    appState.openrouterApiKey = newValue
+                                default:
+                                    break
+                                }
+                            }
+                        ))
                         .textFieldStyle(RoundedBorderTextFieldStyle())
                         .focused($isURLFieldFocused)
                     }
+
                 } else {
                     HStack(alignment: .center) {
                         Text("URL:")
@@ -106,7 +129,7 @@ struct SettingsView: View {
                         .focused($isURLFieldFocused)
                     }
                 }
-                
+
                 HStack(alignment: .center) {
                     Text("Model:")
                         .font(.subheadline)
@@ -144,7 +167,7 @@ struct SettingsView: View {
                         .help("Refresh models")
                     }
                 }
-                
+
                 HStack(alignment: .center) {
                     Text("Shortcut:")
                         .font(.subheadline)
@@ -156,32 +179,40 @@ struct SettingsView: View {
                             appState.updateKeyboardShortcut(appState.keyboardShortcut)
                         }
                 }
-                
+
                 HStack(alignment: .top) {
                     Text("Highlights:")
                         .font(.subheadline)
                         .foregroundColor(.secondary)
                         .frame(width: 80, alignment: .trailing)
                         .padding(.top, 4)
-                    
+
                     VStack(alignment: .leading, spacing: 6) {
                         Slider(value: $appState.highlightIntensity, in: 0.1...0.5)
                             .frame(maxWidth: .infinity)
-                        
+
                         Text("Intensity: \(Int(appState.highlightIntensity * 100))%")
                             .font(.caption)
                             .foregroundColor(.secondary)
                     }
                 }
             }
-            
+
+            // Pin actions to the window bottom (macOS standard) so any
+            // extra vertical space collects above them, not below.
+            Spacer(minLength: 16)
+
             HStack(spacing: 12) {
                 Spacer()
 
                 Button("Cancel") {
                     // Revert changes
                     appState.currentProviderURL = originalURL
-                    appState.deepseekApiKey = originalAPIKey
+                    if previousProvider == .deepseek {
+                        appState.deepseekApiKey = originalAPIKey
+                    } else if previousProvider == .openrouter {
+                        appState.openrouterApiKey = originalAPIKey
+                    }
                     appState.keyboardShortcut = originalShortcut
                     appState.currentModel = previousModel
                     appState.selectedProvider = previousProvider
@@ -197,6 +228,8 @@ struct SettingsView: View {
                     // Update URL or API Key based on provider
                     if appState.selectedProvider == .deepseek {
                         appState.updateDeepSeekAPIKey(appState.deepseekApiKey)
+                    } else if appState.selectedProvider == .openrouter {
+                        appState.updateOpenRouterAPIKey(appState.openrouterApiKey)
                     } else {
                         appState.updateOllamaURL(appState.currentProviderURL)
                     }
@@ -218,11 +251,17 @@ struct SettingsView: View {
             .padding(.top, 8)
         }
         .padding(20)
-        .frame(width: 450, height: 480)
+        .frame(width: WindowMetrics.settings.width, height: WindowMetrics.settings.height)
         .onAppear {
             // Store original values for Cancel
             originalURL = appState.currentProviderURL
-            originalAPIKey = appState.deepseekApiKey
+            if appState.selectedProvider == .deepseek {
+                originalAPIKey = appState.deepseekApiKey
+            } else if appState.selectedProvider == .openrouter {
+                originalAPIKey = appState.openrouterApiKey
+            } else {
+                originalAPIKey = ""
+            }
             originalShortcut = appState.keyboardShortcut
             previousModel = appState.currentModel
             previousProvider = appState.selectedProvider
@@ -236,7 +275,15 @@ struct SettingsView: View {
         }
         .toast(isShowing: $showToast, message: toastMessage, icon: toastIcon)
     }
-    
+
+    private var currentAPIKey: String {
+        switch appState.selectedProvider {
+        case .deepseek: return appState.deepseekApiKey
+        case .openrouter: return appState.openrouterApiKey
+        default: return ""
+        }
+    }
+
     private func setupKeyMonitor() {
         monitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { event in
             if event.keyCode == 53 { // ESC key
@@ -246,7 +293,7 @@ struct SettingsView: View {
             return event
         }
     }
-    
+
     private func removeKeyMonitor() {
         if let monitor = monitor {
             NSEvent.removeMonitor(monitor)

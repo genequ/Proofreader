@@ -11,9 +11,7 @@ struct PromptTemplate: Codable, Identifiable, Equatable {
     
     enum TemplateCategory: String, Codable, CaseIterable {
         case general = "General"
-        case academic = "Academic"
         case business = "Business"
-        case casual = "Casual"
         case technical = "Technical"
         case creative = "Creative"
     }
@@ -38,28 +36,12 @@ struct PromptTemplate: Codable, Identifiable, Equatable {
             category: .general
         ),
         PromptTemplate(
-            id: "academic",
-            name: "Academic Writing",
-            description: "Formal academic and research writing",
-            prompt: "You are an academic writing assistant. Correct grammar, spelling, and punctuation while maintaining formal academic tone. Focus on: precise terminology, clear argumentation, proper citation format preservation, subject-verb agreement, and scholarly language. Ensure clarity and conciseness while preserving the original meaning and academic rigor.",
-            isBuiltIn: true,
-            category: .academic
-        ),
-        PromptTemplate(
             id: "business",
             name: "Business Communication",
             description: "Professional emails and business documents",
             prompt: "You are a business writing assistant. Correct grammar, spelling, and punctuation while maintaining professional tone. Focus on: clarity, conciseness, professional language, proper email etiquette, and business terminology. Ensure the message is clear, polite, and action-oriented while preserving the original intent.",
             isBuiltIn: true,
             category: .business
-        ),
-        PromptTemplate(
-            id: "casual",
-            name: "Casual Writing",
-            description: "Informal messages and social media",
-            prompt: "You are a casual writing assistant. Correct obvious grammar and spelling errors while preserving informal tone and style. Maintain conversational language, contractions, and casual expressions. Only fix clear mistakes without making the text overly formal.",
-            isBuiltIn: true,
-            category: .casual
         ),
         PromptTemplate(
             id: "technical",
@@ -113,16 +95,19 @@ class TemplateManager: ObservableObject {
     
     /// Add a new custom template
     func addTemplate(_ template: PromptTemplate) {
-        var newTemplate = template
-        newTemplate = PromptTemplate(
-            id: UUID().uuidString,
+        // Preserve the caller's id — PromptEditorView sets
+        // `selectedTemplate = template.id` right after adding, so a
+        // regenerated id would point at a template that doesn't exist.
+        // isBuiltIn is still forced off: only custom templates go through here.
+        let stored = PromptTemplate(
+            id: template.id,
             name: template.name,
             description: template.description,
             prompt: template.prompt,
             isBuiltIn: false,
             category: template.category
         )
-        templates.append(newTemplate)
+        templates.append(stored)
         saveCustomTemplates()
     }
     

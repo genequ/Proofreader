@@ -20,17 +20,17 @@ struct ToastView: View {
         HStack(spacing: 12) {
             Image(systemName: icon)
                 .font(.system(size: 16, weight: .semibold))
-                .foregroundColor(.white)
-            
+
             Text(message)
                 .font(.system(size: 14, weight: .medium))
-                .foregroundColor(.white)
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 12)
         .background(
+            // Material adapts to light/dark and matches the macOS 26/27
+            // Liquid Glass look better than a fixed black capsule.
             RoundedRectangle(cornerRadius: 10)
-                .fill(Color.black.opacity(0.85))
+                .fill(.regularMaterial)
                 .shadow(color: Color.black.opacity(0.3), radius: 10, x: 0, y: 5)
         )
         .opacity(opacity)

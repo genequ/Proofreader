@@ -2,7 +2,7 @@ import SwiftUI
 
 struct StatusMenuView: View {
     @EnvironmentObject private var appState: AppState
-    
+
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             statusSection
@@ -78,21 +78,34 @@ struct StatusMenuView: View {
     
     private var actionButtons: some View {
         VStack(alignment: .leading, spacing: 6) {
+            // Settings
+            Button(action: { appState.showSettings(nil) }) {
+                HStack(spacing: 8) {
+                    Image(systemName: "gear")
+                        .frame(width: 16)
+                    Text("Settings")
+                    Spacer()
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .foregroundColor(.primary)
+            }
+            .buttonStyle(.plain)
+
             // Template selector
             Menu {
-                ForEach(appState.templateManager.templates) { template in
-                    Button(action: {
-                        appState.selectedTemplate = template.id
-                    }) {
-                        HStack {
-                            Text(template.name)
-                            if appState.selectedTemplate == template.id {
-                                Spacer()
-                                Image(systemName: "checkmark")
-                            }
-                        }
+                // Picker with .inline style renders a native checkmark next
+                // to the selected template. The previous Button + conditional
+                // Image(checkmark) approach never showed a tick because Menu
+                // flattens button labels.
+                Picker("Template", selection: Binding(
+                    get: { appState.selectedTemplate },
+                    set: { appState.selectedTemplate = $0 }
+                )) {
+                    ForEach(appState.templateManager.templates) { template in
+                        Text(template.name).tag(template.id)
                     }
                 }
+                .pickerStyle(.inline)
                 
                 Divider()
                 
@@ -116,20 +129,8 @@ struct StatusMenuView: View {
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .foregroundColor(.primary)
             }
-            .menuStyle(.borderlessButton)
-            
-            Button(action: { appState.showSettings(nil) }) {
-                HStack(spacing: 8) {
-                    Image(systemName: "gear")
-                        .frame(width: 16)
-                    Text("Settings")
-                    Spacer()
-                }
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .foregroundColor(.primary)
-            }
-            .buttonStyle(.plain)
-            
+            .menuIndicator(.hidden)
+
             Button(action: { appState.showStatistics(nil) }) {
                 HStack(spacing: 8) {
                     Image(systemName: "chart.bar")
@@ -171,11 +172,11 @@ struct StatusMenuView: View {
     }
     
     private var statusText: String {
-        let providerPrefix = appState.selectedProvider.rawValue
+        // Provider prefix already shown in the status line label; don't repeat
         switch appState.ollamaStatus {
-        case .connected: return "\(providerPrefix): Connected"
-        case .checking: return "\(providerPrefix): Checking..."
-        default: return "\(providerPrefix): Error"
+        case .connected: return "Connected"
+        case .checking: return "Checking..."
+        default: return "Error"
         }
     }
     

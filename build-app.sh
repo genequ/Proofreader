@@ -53,6 +53,8 @@ cat > "$APP_BUNDLE/Contents/Info.plist" << EOF
     <string>Copyright © 2025 gequ. All rights reserved.</string>
     <key>NSPrincipalClass</key>
     <string>NSApplication</string>
+    <key>LSUIElement</key>
+    <true/>
     <key>CFBundleIconFile</key>
     <string>AppIcon.icns</string>
     <key>GitCommitHash</key>

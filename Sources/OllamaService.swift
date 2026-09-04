@@ -161,11 +161,17 @@ import Foundation
             throw LLMError.invalidURL(baseURL)
         }
         
-        let parameters: [String: Any] = [
+        var parameters: [String: Any] = [
             "model": model,
             "prompt": prompt,
             "stream": false
         ]
+
+        // Disable thinking mode for models that support it
+        // DeepSeek-R1 and Qwen 3.x models support the 'think' parameter
+        if model.localizedLowercase.contains("deepseek-r1") || model.localizedLowercase.contains("qwen3") {
+            parameters["think"] = false
+        }
         
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
@@ -205,11 +211,17 @@ import Foundation
                         throw URLError(.badURL)
                     }
 
-                    let parameters: [String: Any] = [
+                    var parameters: [String: Any] = [
                         "model": model,
                         "prompt": prompt,
                         "stream": true
                     ]
+
+                    // Disable thinking mode for models that support it
+                    // DeepSeek-R1 and Qwen 3.x models support the 'think' parameter
+                    if model.localizedLowercase.contains("deepseek-r1") || model.localizedLowercase.contains("qwen3") {
+                        parameters["think"] = false
+                    }
 
                     var request = URLRequest(url: url)
                     request.httpMethod = "POST"

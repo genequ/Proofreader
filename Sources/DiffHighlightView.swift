@@ -83,7 +83,7 @@ struct DiffHighlightView: View {
                         .frame(maxWidth: .infinity, alignment: .leading)
                 }
             }
-            .padding(16)
+            .padding(20)
         }
         .onAppear {
             computeDiffIfNeeded()
@@ -143,7 +143,7 @@ struct DiffHighlightView: View {
                 correctedIndex += length
             }
         }
-        return filterTrailingWhitespaceDifferences(differences, in: original)
+        return filterTrailingWhitespaceDifferences(differences, in: original, corrected: corrected)
     }
 
     private static func createAttributedString(for text: String, isOriginal: Bool, differences: [TextDifference], intensity: Double) -> AttributedString {
@@ -275,27 +275,37 @@ struct DiffHighlightView: View {
         }
 
         // Post-process: filter out trailing-only whitespace changes
-        return filterTrailingWhitespaceDifferences(differences, in: original)
+        return filterTrailingWhitespaceDifferences(differences, in: original, corrected: corrected)
     }
 
-    private static func filterTrailingWhitespaceDifferences(_ differences: [TextDifference], in text: String) -> [TextDifference] {
-        // Find the last non-whitespace character position
-        let lastNonWhitespaceIndex = text.lastIndex { !$0.isWhitespace }
-
-        guard let lastIndex = lastNonWhitespaceIndex else {
-            // Text is all whitespace, return all differences
-            return differences
+    private static func filterTrailingWhitespaceDifferences(_ differences: [TextDifference], in original: String, corrected: String) -> [TextDifference] {
+        // Find the last non-whitespace character position in each text.
+        // Deletion ranges are indexed in the original text, insertion ranges in the corrected text,
+        // so each must be compared against its own text — otherwise real changes appended at the
+        // end (e.g. "Win" -> "Windows") would be wrongly dropped as "trailing whitespace".
+        func lastContentPosition(in text: String) -> Int? {
+            guard let lastIndex = text.lastIndex(where: { !$0.isWhitespace }) else {
+                // Text is all whitespace, keep all differences for this text
+                return nil
+            }
+            return text.distance(from: text.startIndex, to: lastIndex)
         }
 
-        let lastContentPosition = text.distance(from: text.startIndex, to: lastIndex)
+        let originalLastContent = lastContentPosition(in: original)
+        let correctedLastContent = lastContentPosition(in: corrected)
 
         // Filter out differences that occur entirely after the last content
+        // and consist only of whitespace (trailing-only whitespace changes).
         return differences.filter { diff in
             switch diff {
-            case .deletion(let range, _):
-                return range.location < lastContentPosition
-            case .insertion(let range, _):
-                return range.location < lastContentPosition
+            case .deletion(let range, let text):
+                guard let last = originalLastContent else { return true }
+                return range.location < last
+                    || !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+            case .insertion(let range, let text):
+                guard let last = correctedLastContent else { return true }
+                return range.location < last
+                    || !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
             }
         }
     }
@@ -304,6 +314,12 @@ struct DiffHighlightView: View {
     private static func longestCommonSubsequence<T: Equatable>(_ a: [T], _ b: [T]) -> [DiffOperation] {
         let m = a.count
         let n = b.count
+
+        // Empty inputs: `1...0` traps at runtime ("Range requires
+        // lowerBound <= upperBound"). Same crash as UsageStatistics.
+        if m == 0 && n == 0 { return [] }
+        if m == 0 { return [.insert(n)] }
+        if n == 0 { return [.delete(m)] }
         
         // Create LCS table
         var lcs = Array(repeating: Array(repeating: 0, count: n + 1), count: m + 1)

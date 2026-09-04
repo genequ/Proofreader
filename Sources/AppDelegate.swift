@@ -7,9 +7,9 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     }
     
     func applicationWillTerminate(_ notification: Notification) {
-        // Force save statistics before quitting
-        let statsManager = StatisticsManager()
-        statsManager.forceSave()
+        // Force save statistics before quitting — must be the shared instance
+        // so pending debounced changes are flushed, not lost.
+        StatisticsManager.shared.forceSave()
 
         // Only stop Ollama model if Ollama is the selected provider
         let provider = UserDefaults.standard.string(forKey: "selectedProvider") ?? "ollama"

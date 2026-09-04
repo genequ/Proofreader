@@ -7,10 +7,10 @@ import Foundation
 final class AppState: ObservableObject {
     @AppStorage("ollamaModel") var ollamaModel: String = "gemma3:4b"
     @AppStorage("selectedProvider") var selectedProvider: LLMProviderType = .ollama
-    @AppStorage("lmstudioURL") var lmstudioURL: String = "http://127.0.0.1:1234/v1"
-    @AppStorage("lmstudioModel") var lmstudioModel: String = ""
     @AppStorage("deepseekApiKey") var deepseekApiKey: String = ""
     @AppStorage("deepseekModel") var deepseekModel: String = "deepseek-v4-flash"
+    @AppStorage("openrouterApiKey") var openrouterApiKey: String = ""
+    @AppStorage("openrouterModel") var openrouterModel: String = "x-ai/grok-4"
     @AppStorage("currentPrompt") var currentPrompt: String = "You are an English proofreading assistant for non-native speakers. Correct grammar, spelling, punctuation, and word choice errors. Pay special attention to: articles (a/an/the), prepositions, verb tenses, subject-verb agreement, plural forms, and natural English phrasing. Preserve the original meaning, tone, and formatting exactly."
     @Published var availableModels: [String] = []
     @Published var ollamaStatus: ProviderStatus = .checking
@@ -41,16 +41,16 @@ final class AppState: ObservableObject {
     
     // Managers
     let templateManager = TemplateManager()
-    let statisticsManager = StatisticsManager()
+    let statisticsManager = StatisticsManager.shared
 
     var currentProvider: any LLMProvider {
         switch selectedProvider {
         case .ollama:
             return ollamaService
-        case .lmstudio:
-            return lmstudioService
         case .deepseek:
             return deepseekService
+        case .openrouter:
+            return openrouterService
         }
     }
 
@@ -59,20 +59,20 @@ final class AppState: ObservableObject {
             switch selectedProvider {
             case .ollama:
                 return ollamaModel
-            case .lmstudio:
-                return lmstudioModel
             case .deepseek:
                 return deepseekModel
+            case .openrouter:
+                return openrouterModel
             }
         }
         set {
             switch selectedProvider {
             case .ollama:
                 ollamaModel = newValue
-            case .lmstudio:
-                lmstudioModel = newValue
             case .deepseek:
                 deepseekModel = newValue
+            case .openrouter:
+                openrouterModel = newValue
             }
         }
     }
@@ -82,28 +82,29 @@ final class AppState: ObservableObject {
             switch selectedProvider {
             case .ollama:
                 return ollamaURL
-            case .lmstudio:
-                return lmstudioURL
             case .deepseek:
                 return "https://api.deepseek.com/v1" // Fixed URL for DeepSeek
+            case .openrouter:
+                return "https://openrouter.ai/api/v1" // Fixed URL for OpenRouter
             }
         }
         set {
             switch selectedProvider {
             case .ollama:
                 ollamaURL = newValue
-            case .lmstudio:
-                lmstudioURL = newValue
             case .deepseek:
                 // DeepSeek uses fixed URL, ignore setter
+                break
+            case .openrouter:
+                // OpenRouter uses fixed URL, ignore setter
                 break
             }
         }
     }
 
     private var ollamaService = OllamaService()
-    private var lmstudioService = LMStudioService()
     private var deepseekService = DeepSeekService(apiKey: "")
+    private var openrouterService = OpenRouterService(apiKey: "")
     private var cancellables = Set<AnyCancellable>()
     private var healthCheckTimer: Timer?
     private var elapsedTimeTimer: Timer?
@@ -129,9 +130,15 @@ final class AppState: ObservableObject {
     }
     
     init() {
-        // Initialize DeepSeek service with saved API key
+        // Load saved API keys into the provider services BEFORE the first
+        // status check. If checkOllamaStatus() races ahead of these updates,
+        // API providers (DeepSeek / OpenRouter) see an empty key and
+        // report `.unauthorized`, which surfaces a spurious warning icon at
+        // launch until the next check finally sees the loaded key.
         Task {
             await deepseekService.updateAPIKey(deepseekApiKey)
+            await openrouterService.updateAPIKey(openrouterApiKey)
+            await MainActor.run { self.checkOllamaStatus() }
         }
         setupKeyboardShortcut()
         startHealthMonitoring()
@@ -157,10 +164,9 @@ final class AppState: ObservableObject {
         healthCheckTimer?.invalidate()
         healthCheckTimer = nil
 
-        // Initial check
-        checkOllamaStatus()
-
-        // Periodic health checks
+        // The first status check is deferred to init(), where it runs only
+        // after the saved API keys have been loaded into the provider services.
+        // Here we only schedule the periodic re-checks.
         healthCheckTimer = Timer.scheduledTimer(withTimeInterval: healthCheckInterval, repeats: true) { [weak self] _ in
             Task { @MainActor in
                 self?.checkOllamaStatus()
@@ -215,6 +221,21 @@ final class AppState: ObservableObject {
         deepseekApiKey = trimmedKey
         Task {
             await deepseekService.updateAPIKey(trimmedKey)
+            checkOllamaStatus()
+        }
+    }
+
+    func updateOpenRouterAPIKey(_ key: String) {
+        let trimmedKey = key.trimmingCharacters(in: .whitespacesAndNewlines)
+        #if DEBUG
+        print("[AppState] updateOpenRouterAPIKey called")
+        print("[AppState]   - original key length: \(key.count)")
+        print("[AppState]   - trimmed key length: \(trimmedKey.count)")
+        print("[AppState]   - key quoted: \(trimmedKey.debugDescription)")
+        #endif
+        openrouterApiKey = trimmedKey
+        Task {
+            await openrouterService.updateAPIKey(trimmedKey)
             checkOllamaStatus()
         }
     }
@@ -462,34 +483,34 @@ final class AppState: ObservableObject {
             id: "proofreading-dialog",
             title: "Proofreading Results",
             content: { ProofreadingDialog().environmentObject(self) },
-            size: NSSize(width: 800, height: 500)
+            size: WindowMetrics.proofreadingDialog
         )
     }
-    
+
     @objc func showSettings(_ sender: Any?) {
         WindowManager.shared.showWindow(
             id: "settings",
             title: "Settings",
             content: { SettingsView().environmentObject(self) },
-            size: NSSize(width: 400, height: 250)
+            size: WindowMetrics.settings
         )
     }
-    
+
     @objc func showAbout(_ sender: Any?) {
         WindowManager.shared.showWindow(
             id: "about",
             title: "About Proofreader",
             content: { AboutView().environmentObject(self) },
-            size: NSSize(width: 320, height: 300)
+            size: WindowMetrics.about
         )
     }
-    
+
     @objc func showStatistics(_ sender: Any?) {
         WindowManager.shared.showWindow(
             id: "statistics",
             title: "Statistics",
             content: { StatisticsView().environmentObject(self) },
-            size: NSSize(width: 600, height: 480)
+            size: WindowMetrics.statistics
         )
     }
     

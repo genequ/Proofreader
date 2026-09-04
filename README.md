@@ -4,7 +4,7 @@ A sleek menu bar utility that uses AI models to proofread and correct text anywh
 
 **Supports multiple AI providers:**
 - 🦙 **Ollama** - Run models locally on your Mac
-- 💻 **LM Studio** - Local models with a friendly interface
+- 🌐 **OpenRouter** - Cloud API with xAI Grok models
 - ☁️ **DeepSeek** - Cloud API, no installation needed
 
 ![Proofreader Menu Bar](https://img.shields.io/badge/macOS-14.0+-blue.svg)
@@ -14,7 +14,7 @@ A sleek menu bar utility that uses AI models to proofread and correct text anywh
 ## Features
 
 - ✨ **Global Keyboard Shortcut** - Proofread text anywhere (default: `⌘+.`). Uses native macOS Carbon HotKeys for zero-latency, beep-free operation.
-- 🔄 **Multiple AI Providers** - Choose between Ollama (local), LM Studio (local), or DeepSeek (cloud)
+- 🔄 **Multiple AI Providers** - Choose between Ollama (local), or DeepSeek / OpenRouter (cloud)
 - 🎯 **Menu Bar Utility** - Lightweight, always accessible from your menu bar
 - ⚡ **Real-time Processing** - Instant proofreading with streaming output and visual feedback
 - 🎨 **macOS Native** - Built with SwiftUI following Apple's HIG
@@ -31,7 +31,7 @@ A sleek menu bar utility that uses AI models to proofread and correct text anywh
 - macOS 14.0 or later (Sonoma and newer)
 - One of the following AI providers:
   - **Ollama**: Install with `brew install ollama` and pull a model
-  - **LM Studio**: Download from [lmstudio.ai](https://lmstudio.ai/)
+  - **OpenRouter**: Get API key from [openrouter.ai](https://openrouter.ai/)
   - **DeepSeek**: Get API key from [platform.deepseek.com](https://platform.deepseek.com/)
 
 
@@ -54,11 +54,11 @@ A sleek menu bar utility that uses AI models to proofread and correct text anywh
 ## Configuration
 
 ### Settings Dialog
-- **Provider Selection**: Choose between Ollama, LM Studio, or DeepSeek
+- **Provider Selection**: Choose between Ollama, DeepSeek, or OpenRouter
 - **Provider URL/API Key**: Configure connection settings for your chosen provider
   - Ollama: `http://127.0.0.1:11434` (default)
-  - LM Studio: `http://127.0.0.1:1234/v1` (default)
   - DeepSeek: Enter your API key
+  - OpenRouter: Enter your API key
 - **Model Selection**: Choose from available models for your selected provider
 - **Keyboard Shortcut**: Customize the global hotkey
 - **Test Connection**: Verify provider connectivity
@@ -84,7 +84,7 @@ You can also create custom templates. Only the "Default" template cannot be dele
 ### Prerequisites
 - Xcode 14.0 or later
 - Swift 5.9 or later
-- An AI provider (Ollama, LM Studio, or DeepSeek API key)
+- An AI provider (Ollama, DeepSeek, or OpenRouter API key)
 
 ### Build Steps
 ```bash
@@ -106,7 +106,7 @@ Proofreader/
 │   ├── ProofreaderApp.swift         # App entry point
 │   ├── LLMProvider.swift            # Provider protocol
 │   ├── OllamaService.swift          # Ollama API integration
-│   ├── LMStudioService.swift        # LM Studio API integration
+│   ├── OpenRouterService.swift       # OpenRouter API integration
 │   ├── DeepSeekService.swift        # DeepSeek API integration
 │   ├── SettingsView.swift           # Configuration UI
 │   ├── PromptEditorView.swift       # Template management UI
@@ -132,14 +132,14 @@ Proofreader/
 
 **"No models available"**
 - **Ollama**: Ensure Ollama is running (`ollama serve`) and pull a model (`ollama pull gemma3:1b`)
-- **LM Studio**: Open LM Studio, load a model, and ensure the API server is enabled
+- **OpenRouter**: Verify your API key is valid and check your internet connection
 - **DeepSeek**: Verify your API key is valid and check your internet connection
 
 **Connection errors**
 - Check that your selected provider is running/configured correctly
 - Verify the URL or API key in Settings
 - For Ollama: `curl http://127.0.0.1:11434/api/tags`
-- For LM Studio: Ensure "Enable Server" is on in settings
+- For OpenRouter: Verify your API key is valid at [openrouter.ai](https://openrouter.ai/)
 - For DeepSeek: Check that your API key is valid at [platform.deepseek.com](https://platform.deepseek.com/)
 
 **Keyboard shortcut not working**
@@ -168,16 +168,13 @@ Grant these in: `System Settings → Privacy & Security → Accessibility`
 2. Click "Refresh" in model selection
 3. Select the new model from Settings
 
-**LM Studio:**
-1. Open LM Studio and go to the AI Models tab
-2. Search and download your desired model
-3. Load the model for chatting
-4. The model will appear in Proofreader's model dropdown
+**OpenRouter:**
+1. Models are fetched automatically from the API (xAI Grok models)
+2. Select from the dropdown in Settings
 
 **DeepSeek:**
 1. Models are fetched automatically from the API
-2. Available models: `deepseek-chat`, `deepseek-coder`
-3. Select from the dropdown in Settings
+2. Select from the dropdown in Settings
 
 ### Custom Keyboard Shortcuts
 Supported formats:

@@ -36,12 +36,15 @@ struct StatisticsView: View {
                     }
                 }
                 .pickerStyle(SegmentedPickerStyle())
+                .labelsHidden()
                 .frame(width: 240)
             }
             
             Divider()
-            
-            // Statistics Grid
+
+            // Scrollable middle so the fixed-height window can never clip
+            // content (the header and buttons stay pinned).
+            ScrollView {
             LazyVGrid(columns: [
                 GridItem(.flexible()),
                 GridItem(.flexible()),
@@ -149,9 +152,8 @@ struct StatisticsView: View {
             .padding()
             .background(Color(NSColor.controlBackgroundColor))
             .cornerRadius(8)
-            
-            Spacer()
-            
+            }
+
             // Actions
             HStack(spacing: 12) {
                 Button("Reset Statistics") {
@@ -159,9 +161,9 @@ struct StatisticsView: View {
                 }
                 .buttonStyle(.borderless)
                 .foregroundColor(.red)
-                
+
                 Spacer()
-                
+
                 Button("Done") {
                     dismiss()
                 }
@@ -170,7 +172,7 @@ struct StatisticsView: View {
             }
         }
         .padding(20)
-        .frame(width: 600, height: 480)
+        .frame(width: WindowMetrics.statistics.width, height: WindowMetrics.statistics.height)
         .onAppear {
             setupKeyMonitor()
         }
@@ -217,7 +219,7 @@ struct StatisticsView: View {
         formatter.timeStyle = .none
         return formatter.string(from: date)
     }
-    
+
     private func setupKeyMonitor() {
         monitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { event in
             if event.keyCode == 53 { // ESC key
@@ -227,7 +229,7 @@ struct StatisticsView: View {
             return event
         }
     }
-    
+
     private func removeKeyMonitor() {
         if let monitor = monitor {
             NSEvent.removeMonitor(monitor)

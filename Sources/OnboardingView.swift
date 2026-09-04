@@ -94,7 +94,7 @@ struct OnboardingView: View {
             
             VStack(alignment: .leading, spacing: 12) {
                 FeatureRow(icon: "keyboard", title: "Global Keyboard Shortcut", description: "Proofread text anywhere with a hotkey")
-                FeatureRow(icon: "square.stack.3d.up", title: "Multiple AI Providers", description: "Works with Ollama, LM Studio, or DeepSeek")
+                FeatureRow(icon: "square.stack.3d.up", title: "Multiple AI Providers", description: "Works with Ollama, DeepSeek, or OpenRouter")
                 FeatureRow(icon: "bolt.fill", title: "Real-time Processing", description: "Instant proofreading with visual feedback")
             }
             .padding()
@@ -236,16 +236,16 @@ struct OnboardingView: View {
     private func providerIcon(for provider: LLMProviderType) -> String {
         switch provider {
         case .ollama: return "server.rack"
-        case .lmstudio: return "laptopcomputer"
         case .deepseek: return "cloud"
+        case .openrouter: return "point.3.connected.trianglepath.dotted"
         }
     }
 
     private func providerDescription(for provider: LLMProviderType) -> String {
         switch provider {
         case .ollama: return "Run AI models locally on your Mac"
-        case .lmstudio: return "Local models with a friendly interface"
         case .deepseek: return "Cloud API, no installation needed"
+        case .openrouter: return "Unified access to many cloud models"
         }
     }
 
@@ -253,26 +253,26 @@ struct OnboardingView: View {
         switch provider {
         case .ollama:
             return "Install and start Ollama, then download a model."
-        case .lmstudio:
-            return "Install LM Studio, enable the API server, and load a model."
         case .deepseek:
             return "Get your API key from platform.deepseek.com"
+        case .openrouter:
+            return "Get your API key from openrouter.ai/keys"
         }
     }
 
     private func providerErrorMessage(for provider: LLMProviderType) -> String {
         switch provider {
         case .ollama: return "Ollama not detected"
-        case .lmstudio: return "LM Studio not connected"
         case .deepseek: return "API key invalid or missing"
+        case .openrouter: return "API key invalid or missing"
         }
     }
 
     private func providerDownloadURL(for provider: LLMProviderType) -> URL? {
         switch provider {
         case .ollama: return URL(string: "https://ollama.ai/download")
-        case .lmstudio: return URL(string: "https://lmstudio.ai/")
         case .deepseek: return URL(string: "https://platform.deepseek.com/")
+        case .openrouter: return URL(string: "https://openrouter.ai/keys")
         }
     }
     
